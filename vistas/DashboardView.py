@@ -9,16 +9,16 @@ matplotlib.use('QtAgg')
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-# ══════════════════════════════════════════════════════
-# canvas de matplotlib incorporado con diseño premium
-# ══════════════════════════════════════════════════════
+#
+# canvas de matplotlib incorporado con diseno premium
+#
 class VentasChartCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=3.5, dpi=100):
         # crear la figura y el eje de dibujo
         fig = Figure(figsize=(width, height), dpi=dpi, facecolor='white')
         self.axes = fig.add_subplot(111)
         
-        # eliminar bordes para estética limpia
+        # eliminar bordes para estetica limpia
         self.axes.spines['top'].set_visible(False)
         self.axes.spines['right'].set_visible(False)
         self.axes.spines['left'].set_color('#E6E9ED')
@@ -37,13 +37,13 @@ class VentasChartCanvas(FigureCanvas):
         self.axes.clear()
         self.axes.grid(True, linestyle='--', alpha=0.4, color='#CCD1D9')
         
-        # dibujar la línea de ventas en azul corporativo ucsm
+        # dibujar la linea de ventas en azul corporativo ucsm
         self.axes.plot(semanas, ventas, marker='o', color='#1B2A4A', linewidth=2, markersize=4, label="Ventas Semanales")
         
-        # llenar el área debajo de la línea para un toque premium (glassmorphism/gradient effect)
+        # llenar el area debajo de la linea para un toque premium (glassmorphism/gradient effect)
         self.axes.fill_between(semanas, ventas, color='#1B2A4A', alpha=0.08)
         
-        # formatear título y etiquetas
+        # formatear titulo y etiquetas
         self.axes.set_title("Ventas Semanales (S/.)", color='#1B2A4A', fontsize=10, fontweight='bold', pad=10)
         
         # ajustar los ejes de forma limpia
@@ -61,9 +61,9 @@ class VentasChartCanvas(FigureCanvas):
         self.draw()
 
 
-# ══════════════════════════════════════════════════════
+#
 # vista del dashboard general
-# ══════════════════════════════════════════════════════
+#
 class DashboardView(QWidget):
     def __init__(self):
         super().__init__()
@@ -119,7 +119,7 @@ class DashboardView(QWidget):
         header_lay.addWidget(self.lbl_periodo)
         contenido_layout.addWidget(header_frame)
 
-        # 2. tarjetas kpis superiores (ventas del mes, clientes nuevos)
+        # 2. tarjetas kpis superiores (ventas del mes clientes nuevos)
         kpis_row = QHBoxLayout()
         kpis_row.setSpacing(20)
 
@@ -165,7 +165,7 @@ class DashboardView(QWidget):
 
         contenido_layout.addLayout(kpis_row)
 
-        # 3. tabla de últimas facturas emitidas
+        # 3. tabla de ultimas facturas emitidas
         tabla_frame = QFrame()
         tabla_frame.setObjectName("SeccionFrame")
         tabla_lay = QVBoxLayout(tabla_frame)
@@ -186,7 +186,7 @@ class DashboardView(QWidget):
         tabla_lay.addWidget(self.tabla_ultimas)
         contenido_layout.addWidget(tabla_frame)
 
-        # 4. gráfico contenedor
+        # 4. grafico contenedor
         grafico_frame = QFrame()
         grafico_frame.setObjectName("SeccionFrame")
         grafico_lay = QVBoxLayout(grafico_frame)

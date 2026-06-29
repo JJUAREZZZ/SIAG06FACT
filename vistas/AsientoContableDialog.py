@@ -18,7 +18,7 @@ class AsientoContableDialog(QDialog):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(14)
 
-        # 1. cabecera principal del diálogo
+        # 1. cabecera principal del dialogo
         header_lbl = QLabel("Consulta de Asiento Contable")
         header_lbl.setStyleSheet("color: #1B2A4A; font-size: 20px; font-weight: bold;")
         main_layout.addWidget(header_lbl)
@@ -36,7 +36,7 @@ class AsientoContableDialog(QDialog):
             main_layout.addWidget(btn_close, 0, Qt.AlignmentFlag.AlignCenter)
             return
 
-        # 2. si hay asientos, mostramos la información. si hay más de uno (ej: venta y extorno), usamos tabs
+        # 2. si hay asientos mostramos la informacion. si hay mas de uno (ej: venta y extorno) usamos tabs
         if len(asientos) > 1:
             self.tabs = QTabWidget()
             self.tabs.setStyleSheet("""
@@ -50,14 +50,14 @@ class AsientoContableDialog(QDialog):
                 self.tabs.addTab(self._crear_vista_asiento(as_data, num_factura), tab_name)
             main_layout.addWidget(self.tabs)
         else:
-            # solo hay un asiento, lo mostramos directamente
+            # solo hay un asiento lo mostramos directamente
             widget_asiento = self._crear_vista_asiento(asientos[0], num_factura)
             main_layout.addWidget(widget_asiento)
 
-        # 3. fila de botones e interfaz inferior común
+        # 3. fila de botones e interfaz inferior comun
         bottom_layout = QHBoxLayout()
         
-        # botón pdf
+        # boton pdf
         self.btn_pdf = QPushButton("Exportar Asiento PDF")
         self.btn_pdf.setStyleSheet("""
             QPushButton {
@@ -72,7 +72,7 @@ class AsientoContableDialog(QDialog):
         
         bottom_layout.addStretch()
         
-        # botón cerrar / regresar
+        # boton cerrar / regresar
         self.btn_cerrar = QPushButton("Regresar")
         self.btn_cerrar.setStyleSheet("""
             QPushButton {
@@ -88,7 +88,7 @@ class AsientoContableDialog(QDialog):
         main_layout.addLayout(bottom_layout)
 
     def _crear_vista_asiento(self, as_data, num_factura):
-        """Crea el widget de visualización para un asiento específico."""
+        """crea el widget de visualizacion para un asiento especifico."""
         widget = QWidget()
         widget.setStyleSheet("background-color: white; border-radius: 6px;")
         layout = QVBoxLayout(widget)
@@ -188,10 +188,10 @@ class AsientoContableDialog(QDialog):
             
         layout.addWidget(tabla)
 
-        # panel de pie de asiento (totales y validación)
+        # panel de pie de asiento (totales y validacion)
         footer_layout = QHBoxLayout()
         
-        # badge de validación
+        # badge de validacion
         val_badge = QLabel("  Estado:  🟢 CUADRADO  ")
         val_badge.setStyleSheet("""
             color: #468847;

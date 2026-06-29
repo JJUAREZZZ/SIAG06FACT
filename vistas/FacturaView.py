@@ -3,15 +3,15 @@ from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLineEdit,
     QPushButton, QTableWidget, QTableWidgetItem,
     QFrame, QLabel, QDialog, QAbstractItemView,
-    QHeaderView, QGridLayout, QSizePolicy
+    QHeaderView, QGridLayout, QSizePolicy, QComboBox
 )
 from PyQt6.QtCore import Qt, QDate, pyqtSignal
-from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtGui import QColor, QFont, QIntValidator, QDoubleValidator
 
 
-# ══════════════════════════════════════════════════════
-# popup de búsqueda genérico
-# ══════════════════════════════════════════════════════
+#
+# popup de busqueda generico
+#
 class BusquedaPopup(QDialog):
     item_seleccionado = pyqtSignal(dict)
 
@@ -111,19 +111,19 @@ class BusquedaPopup(QDialog):
 
 # vista principal de factura
 class FacturaView(QWidget):
-    fila_eliminada_index = pyqtSignal(int)   # emitida cada vez que se borra un item de la tabla con su índice
+    fila_eliminada_index = pyqtSignal(int)   # emitida cada vez que se borra un item de la tabla con su indice
 
     def __init__(self):
         super().__init__()
 
-        # sizepolicy expansiva para que el stackedwidget lo estire al 100%
+        # sizepolicy expansiva para que el stackedwidget lo estire al 100
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         # estilos globales
         self.setStyleSheet("""
             QWidget { font-family: 'Segoe UI', Arial, sans-serif; }
 
-            QLabel { color: #7c7c7c; font-size: 13px; font-weight: bold; border: none; }
+            QLabel { color: #000000; font-size: 13px; font-weight: bold; border: none; }
 
             QLineEdit {
                 padding: 8px;
@@ -135,6 +135,31 @@ class FacturaView(QWidget):
                 min-height: 28px;
             }
             QLineEdit:focus { border: 1.5px solid #1B2A4A; }
+
+            QComboBox {
+                padding: 6px 12px;
+                border: 1px solid #CCD1D9;
+                border-radius: 4px;
+                background: white;
+                color: black;
+                font-size: 13px;
+                min-height: 28px;
+            }
+            QComboBox:focus { border: 1.5px solid #1B2A4A; }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                border: 1px solid #CCD1D9;
+                selection-background-color: #1B2A4A;
+                selection-color: white;
+                padding: 4px;
+            }
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left-width: 0px;
+            }
 
             QFrame#SeccionFrame {
                 background-color: white;
@@ -168,7 +193,7 @@ class FacturaView(QWidget):
             }
         """)
 
-        # layout raíz igual estructura que los demas modulos
+        # layout raiz igual estructura que los demas modulos
         falso_layout = QHBoxLayout(self)
         falso_layout.setContentsMargins(0, 0, 0, 0)
         falso_layout.setSpacing(0)
@@ -245,7 +270,7 @@ class FacturaView(QWidget):
         grid_cliente.setVerticalSpacing(8)
         grid_cliente.setHorizontalSpacing(20)
 
-        # título + botón buscar
+        # titulo  boton buscar
         lbl_info_cli = QLabel("Información del cliente")
         lbl_info_cli.setStyleSheet("color: #1B2A4A; font-size: 15px; font-weight: bold;")
         grid_cliente.addWidget(lbl_info_cli, 0, 0, 1, 3)
@@ -300,10 +325,40 @@ class FacturaView(QWidget):
         grid_cliente.addWidget(self.lbl_cli_tel,   4, 1)
         grid_cliente.addWidget(self.lbl_cli_email, 4, 2)
 
+        # fila 5: etiquetas combos de pago y moneda
+        for col, txt in enumerate(["Tipo Comprobante", "Forma de Pago", "Método de Pago", "Moneda"]):
+            lbl = QLabel(txt.upper())
+            lbl.setStyleSheet(
+                "color: #8A96B0; font-size: 10px; font-weight: bold; "
+                "letter-spacing: 0.4px; border: none; padding: 0; margin-top: 8px;"
+            )
+            grid_cliente.addWidget(lbl, 5, col)
+
+        # fila 6: combos
+        self.combo_tipo_comprobante = QComboBox()
+        self.combo_tipo_comprobante.addItems(["Factura Electrónica", "Boleta de Venta"])
+        
+        self.combo_forma_pago = QComboBox()
+        self.combo_forma_pago.addItems(["Contado", "Crédito"])
+        
+        self.combo_metodo_pago = QComboBox()
+        self.combo_metodo_pago.addItems(["Efectivo", "Tarjeta", "Transferencia"])
+        
+        self.combo_moneda = QComboBox()
+        self.combo_moneda.addItems(["PEN (S/)", "USD ($)"])
+
+        grid_cliente.addWidget(self.combo_tipo_comprobante, 6, 0)
+        grid_cliente.addWidget(self.combo_forma_pago, 6, 1)
+        grid_cliente.addWidget(self.combo_metodo_pago, 6, 2)
+        grid_cliente.addWidget(self.combo_moneda, 6, 3)
+
+        # reactividad para deshabilitar metodo de pago en credito
+        self.combo_forma_pago.currentTextChanged.connect(self._on_forma_pago_changed)
+
         grid_cliente.setColumnStretch(0, 3)
         grid_cliente.setColumnStretch(1, 2)
         grid_cliente.setColumnStretch(2, 2)
-        grid_cliente.setColumnStretch(3, 1)
+        grid_cliente.setColumnStretch(3, 2)
 
         contenido_layout.addWidget(cliente_frame)
 
@@ -375,13 +430,13 @@ class FacturaView(QWidget):
         self.input_prod_cantidad = QLineEdit("1")
         self.input_prod_cantidad.setFixedWidth(90)
         self.input_prod_cantidad.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.input_prod_cantidad.setStyleSheet("color: #1B2A4A; background: white;")
+        self.input_prod_cantidad.setValidator(QIntValidator(1, 99999))
 
         self.input_prod_descuento = QLineEdit("0")
         self.input_prod_descuento.setFixedWidth(110)
         self.input_prod_descuento.setPlaceholderText("0.00")
         self.input_prod_descuento.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.input_prod_descuento.setStyleSheet("color: #1B2A4A; background: white;")
+        self.input_prod_descuento.setValidator(QDoubleValidator(0.0, 99.99, 2))
 
         grid_prod.addWidget(self.input_prod_cantidad,  5, 0)
         grid_prod.addWidget(self.input_prod_descuento, 5, 1)
@@ -484,7 +539,7 @@ class FacturaView(QWidget):
             return l
 
         lbl_sub = _tot_lbl("Subtotal:")
-        self.lbl_val_subtotal = _tot_lbl("S/ 0.00", color="#1B2A4A")
+        self.lbl_val_subtotal = _tot_lbl("S/ 0.00", color="#000000")
         self.lbl_val_subtotal.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
@@ -495,8 +550,8 @@ class FacturaView(QWidget):
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
 
-        self.lbl_igv = _tot_lbl("IGV (18%):")
-        self.lbl_val_igv = _tot_lbl("S/ 0.00", color="#1B2A4A")
+        self.lbl_igv = _tot_lbl("IGV:")
+        self.lbl_val_igv = _tot_lbl("S/ 0.00", color="#000000")
         self.lbl_val_igv.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
@@ -507,7 +562,7 @@ class FacturaView(QWidget):
         sep_tot.setStyleSheet("border:none; border-top:1px solid #E6E9ED;")
 
         lbl_total = _tot_lbl("Total a pagar:", bold=True, big=True, color="#1B2A4A")
-        self.lbl_val_total = _tot_lbl("S/ 0.00", bold=True, big=True, color="#1B2A4A")
+        self.lbl_val_total = _tot_lbl("S/ 0.00", bold=True, big=True, color="#000000")
         self.lbl_val_total.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
@@ -531,7 +586,7 @@ class FacturaView(QWidget):
     # esto son helpers
     @staticmethod
     def _val_label(texto="—"):
-        """Etiqueta de solo lectura con fondo gris claro."""
+        """etiqueta de solo lectura con fondo gris claro."""
         lbl = QLabel(texto)
         lbl.setStyleSheet("""
             color: #1B2A4A;
@@ -583,7 +638,7 @@ class FacturaView(QWidget):
         for col, (val, alig) in enumerate(datos):
             item = QTableWidgetItem(val)
             item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | alig)
-            item.setForeground(QColor("#1B2A4A"))
+            item.setForeground(QColor("#000000"))
             self.tabla_detalle.setItem(row, col, item)
 
         btn_del = QPushButton("X")
@@ -626,5 +681,23 @@ class FacturaView(QWidget):
             getattr(self, attr).setText("—")
         self.input_prod_cantidad.setText("1")
         self.input_prod_descuento.setText("0")
+        self.combo_tipo_comprobante.setCurrentIndex(0)
+        self.combo_forma_pago.setCurrentIndex(0)
+        self.combo_metodo_pago.setCurrentIndex(0)
+        self.combo_moneda.setCurrentIndex(0)
+        self.combo_metodo_pago.setEnabled(True)
         self.actualizar_totales(0, 0, 0, 0)
         self.lbl_cli_fecha.setText(QDate.currentDate().toString("dd/MM/yyyy"))
+
+    def _on_forma_pago_changed(self, texto):
+        if texto == "Crédito":
+            self.combo_metodo_pago.setEnabled(False)
+            if self.combo_metodo_pago.findText("—") == -1:
+                self.combo_metodo_pago.addItem("—")
+            self.combo_metodo_pago.setCurrentText("—")
+        else:
+            self.combo_metodo_pago.setEnabled(True)
+            idx = self.combo_metodo_pago.findText("—")
+            if idx != -1:
+                self.combo_metodo_pago.removeItem(idx)
+            self.combo_metodo_pago.setCurrentIndex(0)

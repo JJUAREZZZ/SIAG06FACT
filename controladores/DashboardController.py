@@ -17,7 +17,7 @@ class DashboardController:
             facturas = self.model.obtener_todas()
             clientes = self.cliente_model.obtener_todos()
 
-            # determinar el periodo activo (mes/año de la factura más reciente, o el mes/año actual)
+            # determinar el periodo activo (mes/ano de la factura mas reciente o el mes/ano actual)
             if facturas:
                 fechas = [datetime.strptime(f["fecha"], "%Y-%m-%d") for f in facturas]
                 mas_reciente = max(fechas)
@@ -33,7 +33,7 @@ class DashboardController:
             self.view.lbl_periodo.setText(f"Dashboard general  |  {nombre_mes} {anio_activo}")
 
             # 2. calcular kpis reales del periodo activo
-            # filtrar facturas del mes activo que no estén anuladas
+            # filtrar facturas del mes activo que no esten anuladas
             facturas_mes = []
             for f in facturas:
                 f_date = datetime.strptime(f["fecha"], "%Y-%m-%d")
@@ -58,7 +58,7 @@ class DashboardController:
 
             total_ventas_prev = sum(float(f["total"]) for f in facturas_mes_prev if f.get("estado") != "Anulada")
 
-            # tendencia de ventas (%)
+            # tendencia de ventas ()
             if total_ventas_prev > 0:
                 diff_ventas_pct = ((total_ventas - total_ventas_prev) / total_ventas_prev) * 100.0
                 trend_ventas = f"{'+' if diff_ventas_pct >= 0 else ''}{diff_ventas_pct:.1f}%"
@@ -90,19 +90,19 @@ class DashboardController:
 
             self.view.actualizar_kpis(total_ventas, clientes_nuevos, trend_ventas, trend_clientes)
 
-            # 3. cargar la tabla de últimas facturas emitidas (las últimas 5)
+            # 3. cargar la tabla de ultimas facturas emitidas (las ultimas 5)
             ultimas = facturas[:5]
             self.view.cargar_ultimas_facturas(ultimas)
 
-            # 4. generar datos del gráfico de ventas semanales de forma dinámica (últimas 12 semanas)
+            # 4. generar datos del grafico de ventas semanales de forma dinamica (ultimas 12 semanas)
             if facturas:
                 fechas = [datetime.strptime(f["fecha"], "%Y-%m-%d") for f in facturas]
                 fecha_max = max(fechas)
             else:
                 fecha_max = datetime.now()
 
-            # generar las últimas 12 semanas cronológicamente
-            semanas_keys = []   # lista de tuplas (year, week)
+            # generar las ultimas 12 semanas cronologicamente
+            semanas_keys = []   # lista de tuplas (year week)
             semanas_labels = [] # lista de etiquetas "sem x"
             
             from datetime import timedelta

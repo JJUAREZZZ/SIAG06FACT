@@ -5,9 +5,9 @@ from PyQt6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLineEdit,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QPixmap
 
-# ══════════════════════════════════════════════════════
-# formulario modal de registro con fijación estética
-# ══════════════════════════════════════════════════════
+#
+# formulario modal de registro con fijacion estetica
+#
 class FormularioProductoDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -58,7 +58,7 @@ class FormularioProductoDialog(QDialog):
         lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1B2A4A; margin-bottom: 5px;")
         layout.addWidget(lbl_title)
 
-        # rejilla simétrica para acomodar los cuadros de entrada uniformemente
+        # rejilla simetrica para acomodar los cuadros de entrada uniformemente
         grid = QGridLayout()
         grid.setVerticalSpacing(10)
         grid.setHorizontalSpacing(15)
@@ -72,7 +72,7 @@ class FormularioProductoDialog(QDialog):
         self.combo_categoria = QComboBox()
         self.combo_impuesto = QComboBox()
         
-        # sitema 1: isc ad valorem (%)
+        # sitema 1: isc ad valorem ()
         self.input_impuesto_extra = QLineEdit("0.00")
         self.input_impuesto_extra.setPlaceholderText("Tasa porcentual (Ej: 40.00)")
 
@@ -80,7 +80,7 @@ class FormularioProductoDialog(QDialog):
         self.input_isc_monto_fijo = QLineEdit("0.00")
         self.input_isc_monto_fijo.setPlaceholderText("Monto por litro (Ej: 3.40)")
 
-        # métrica obligatoria para el cálculo específico de volumen
+        # metrica obligatoria para el calculo especifico de volumen
         self.input_volumen_litros = QLineEdit("0.000")
         self.input_volumen_litros.setPlaceholderText("Contenido en Litros (Ej: 0.750)")
 
@@ -143,18 +143,18 @@ class FormularioProductoDialog(QDialog):
         btn_layout.addWidget(self.btn_guardar_form)
         layout.addLayout(btn_layout)
 
-        # conectar señal de categoría para automatizar reglas de afectación sunat e isc
+        # conectar senal de categoria para automatizar reglas de afectacion sunat e isc
         self.combo_categoria.currentTextChanged.connect(self._al_cambiar_categoria)
 
     def _al_cambiar_categoria(self, cat_nombre):
-        # 1. bienes exonerados del apéndice i (libros y educación, alimentos básicos)
+        # 1. bienes exonerados del apendice i (libros y educacion alimentos basicos)
         if cat_nombre in ["Libros y Educación", "Alimentos Básicos"]:
-            # preseleccionar afectación igv: exonerado (id_impuesto = 2)
+            # preseleccionar afectacion igv: exonerado (id_impuesto  2)
             index_exo = self.combo_impuesto.findData(2)
             if index_exo != -1:
                 self.combo_impuesto.setCurrentIndex(index_exo)
             
-            # deshabilitar isc ad valorem, isc monto fijo y volumen
+            # deshabilitar isc ad valorem isc monto fijo y volumen
             self.input_impuesto_extra.setText("0.00")
             self.input_impuesto_extra.setEnabled(False)
             self.input_isc_monto_fijo.setText("0.00")
@@ -162,9 +162,9 @@ class FormularioProductoDialog(QDialog):
             self.input_volumen_litros.setText("0.000")
             self.input_volumen_litros.setEnabled(False)
             
-        # 2. combustibles y carbones (apéndice iii - isc monto fijo + volumen obligatorio)
+        # 2. combustibles y carbones (apendice iii - isc monto fijo  volumen obligatorio)
         elif cat_nombre in ["Combustibles", "Combustibles y Carbones"]:
-            # deshabilitar isc ad valorem (ad valorem es para licores/vehículos, no combustibles)
+            # deshabilitar isc ad valorem (ad valorem es para licores/vehiculos no combustibles)
             self.input_impuesto_extra.setText("0.00")
             self.input_impuesto_extra.setEnabled(False)
             
@@ -172,12 +172,12 @@ class FormularioProductoDialog(QDialog):
             self.input_isc_monto_fijo.setEnabled(True)
             self.input_volumen_litros.setEnabled(True)
             
-            # seleccionar igv normal por defecto (id_impuesto = 1)
+            # seleccionar igv normal por defecto (id_impuesto  1)
             index_igv = self.combo_impuesto.findData(1)
             if index_igv != -1:
                 self.combo_impuesto.setCurrentIndex(index_igv)
                 
-        # 3. licores y especiales (apéndice iv - isc ad valorem)
+        # 3. licores y especiales (apendice iv - isc ad valorem)
         elif cat_nombre == "Licores y Especiales":
             self.input_impuesto_extra.setEnabled(True)
             self.input_isc_monto_fijo.setText("0.00")
@@ -185,12 +185,12 @@ class FormularioProductoDialog(QDialog):
             self.input_volumen_litros.setText("0.000")
             self.input_volumen_litros.setEnabled(False)
             
-            # seleccionar igv normal (id_impuesto = 1)
+            # seleccionar igv normal (id_impuesto  1)
             index_igv = self.combo_impuesto.findData(1)
             if index_igv != -1:
                 self.combo_impuesto.setCurrentIndex(index_igv)
         
-        # 4. otras categorías generales
+        # 4. otras categorias generales
         else:
             self.input_impuesto_extra.setEnabled(True)
             self.input_isc_monto_fijo.setEnabled(True)
@@ -210,7 +210,7 @@ class FormularioProductoDialog(QDialog):
         self.input_isc_monto_fijo.setText(f"{float(datos.get('isc_monto_fijo', 0.0)):.2f}")
         self.input_volumen_litros.setText(f"{float(datos.get('volumen_litros', 0.000)):.3f}")
         
-        # seleccionar categoría
+        # seleccionar categoria
         idx_cat = self.combo_categoria.findData(datos.get("id_categoria_producto"))
         if idx_cat != -1:
             self.combo_categoria.setCurrentIndex(idx_cat)
@@ -220,7 +220,7 @@ class FormularioProductoDialog(QDialog):
         if idx_imp != -1:
             self.combo_impuesto.setCurrentIndex(idx_imp)
 
-        # aplicar el habilitado/deshabilitado basándose en la categoría actual pre-poblada
+        # aplicar el habilitado/deshabilitado basandose en la categoria actual pre-poblada
         self._al_cambiar_categoria(self.combo_categoria.currentText())
 
     def poblar_selectores(self, categorias, impuestos):
@@ -235,7 +235,7 @@ class FormularioProductoDialog(QDialog):
     def accept(self):
         from PyQt6.QtWidgets import QMessageBox
         
-        # validar código y nombre
+        # validar codigo y nombre
         if not self.input_codigo.text().strip():
             QMessageBox.warning(self, "Campos Requeridos", "El código de barra es obligatorio.")
             return
@@ -307,7 +307,7 @@ class FormularioProductoDialog(QDialog):
                 QMessageBox.warning(self, "Valor Incorrecto", "El volumen en litros debe ser un número decimal válido.")
                 return
 
-        # validar combustibles y carbones (apéndice iii - requiere volumen > 0)
+        # validar combustibles y carbones (apendice iii - requiere volumen  0)
         cat_nombre = self.combo_categoria.currentText()
         if cat_nombre in ["Combustibles", "Combustibles y Carbones"]:
             try:
@@ -351,9 +351,9 @@ class FormularioProductoDialog(QDialog):
         }
 
 
-# ══════════════════════════════════════════════════════
-# interfaz gráfica principal del panel de productos
-# ══════════════════════════════════════════════════════
+#
+# interfaz grafica principal del panel de productos
+#
 class ProductoView(QWidget):
     def __init__(self):
         super().__init__()
@@ -406,7 +406,7 @@ class ProductoView(QWidget):
         self.input_buscar.setPlaceholderText("Búsqueda por código o nombre...")
         self.input_buscar.setStyleSheet("QLineEdit { padding: 8px; border: 1px solid #CCD1D9; border-radius: 4px; background: white; color: black; min-height: 28px; }")
         
-        # filtrar por categoría
+        # filtrar por categoria
         self.combo_categoria = QComboBox()
         self.combo_categoria.setStyleSheet("""
             QComboBox { padding: 7px; border: 1px solid #CCD1D9; border-radius: 4px; background: white; color: black; min-height: 28px; }
@@ -453,7 +453,7 @@ class ProductoView(QWidget):
         self.tabla.horizontalHeader().setStretchLastSection(True)
         contenido_layout.addWidget(self.tabla)
         
-        # paginación y resumen de productos (mockup 3)
+        # paginacion y resumen de productos (mockup 3)
         bottom_layout = QHBoxLayout()
         self.pag_layout = QHBoxLayout()
         self.pag_layout.setSpacing(6)

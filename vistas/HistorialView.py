@@ -6,8 +6,8 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
 
 class HistorialView(QWidget):
-    # señal emitida cuando el usuario cambia el estado de una factura
-    cambio_estado_solicitado = pyqtSignal(str, str) # num_factura, nuevo_estado
+    # senal emitida cuando el usuario cambia el estado de una factura
+    cambio_estado_solicitado = pyqtSignal(str, str) # num_factura nuevo_estado
 
     def __init__(self):
         super().__init__()
@@ -79,7 +79,7 @@ class HistorialView(QWidget):
         contenido_layout.setSpacing(14)
         falso_layout.addWidget(self.contenido_widget)
 
-        # 1. cabecera / título
+        # 1. cabecera / titulo
         self.lbl_titulo = QLabel("Historial de facturas emitidas (Filtro: mayo 2026)")
         self.lbl_titulo.setStyleSheet("color: #1B2A4A; font-size: 20px; font-weight: bold;")
         contenido_layout.addWidget(self.lbl_titulo)
@@ -91,7 +91,7 @@ class HistorialView(QWidget):
         filters_lay.setContentsMargins(15, 10, 15, 10)
         filters_lay.setSpacing(15)
 
-        # búsqueda
+        # busqueda
         bus_lay = QVBoxLayout()
         bus_lay.addWidget(QLabel("Búsqueda por número o cliente:"))
         self.input_buscar = QLineEdit()
@@ -115,7 +115,7 @@ class HistorialView(QWidget):
         fec_lay.addWidget(self.combo_fecha)
         filters_lay.addLayout(fec_lay, 2)
 
-        # botón cambiar estado y ver asiento
+        # boton cambiar estado y ver asiento
         act_lay = QVBoxLayout()
         act_lay.addWidget(QLabel("Acciones:"))
         
@@ -127,9 +127,13 @@ class HistorialView(QWidget):
         
         self.btn_ver_asiento = QPushButton("Ver Asiento")
         self.btn_ver_asiento.setStyleSheet("QPushButton { background-color: #2C3E6B; color: white; font-weight: bold; padding: 8px 12px; border-radius: 4px; border: none; } QPushButton:hover { background-color: #3A4F85; }")
+
+        self.btn_imprimir = QPushButton("Imprimir Factura")
+        self.btn_imprimir.setStyleSheet("QPushButton { background-color: #70AD47; color: white; font-weight: bold; padding: 8px 12px; border-radius: 4px; border: none; } QPushButton:hover { background-color: #5B9337; }")
         
         btn_lay.addWidget(self.btn_cambiar_estado)
         btn_lay.addWidget(self.btn_ver_asiento)
+        btn_lay.addWidget(self.btn_imprimir)
         
         act_lay.addLayout(btn_lay)
         filters_lay.addLayout(act_lay, 3)
@@ -145,10 +149,10 @@ class HistorialView(QWidget):
         self.tabla.horizontalHeader().setStretchLastSection(True)
         contenido_layout.addWidget(self.tabla)
 
-        # 4. fila inferior (paginación a la izquierda, totales a la derecha)
+        # 4. fila inferior (paginacion a la izquierda totales a la derecha)
         bottom_layout = QHBoxLayout()
         
-        # paginación (mockup 2: < 1 2 3 4 ... 10 >)
+        # paginacion (mockup 2:  1 2 3 4 ... 10 )
         self.pag_layout = QHBoxLayout()
         self.pag_layout.setSpacing(6)
         
@@ -184,7 +188,7 @@ class HistorialView(QWidget):
         bottom_layout.addLayout(self.pag_layout)
         bottom_layout.addStretch()
 
-        # resumen estadístico (mockup 2 bottom right)
+        # resumen estadistico (mockup 2 bottom right)
         resumen_frame = QFrame()
         resumen_frame.setStyleSheet("background-color: white; border: 1px solid #E6E9ED; border-radius: 6px; padding: 15px;")
         resumen_lay = QVBoxLayout(resumen_frame)

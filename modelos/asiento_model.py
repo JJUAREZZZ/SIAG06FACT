@@ -2,7 +2,6 @@ import sqlite3
 import os
 from datetime import datetime
 
-# resolve absolute path (deficiency 2.1)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "sistema_facturacion.db")
 
@@ -32,7 +31,7 @@ class AsientoModel:
             )
         """)
 
-        # semillero de cuentas contables (pcge de perú)
+        # semillero de cuentas contables (pcge de peru)
         cursor.execute("SELECT COUNT(*) AS total FROM MAE_CUENTA_CONTABLE")
         if cursor.fetchone()["total"] == 0:
             cuentas = [
@@ -45,6 +44,15 @@ class AsientoModel:
             conn.commit()
             print("[DEBUG] Semillero contable (MAE_CUENTA_CONTABLE) inicializado con cuentas 1212, 40111 y 70111.")
 
+        # control de migracion para asiento: si existe pero no tiene el campo 'usuario_creacion'
+        cursor.execute("PRAGMA table_info(TRS_ASIENTO_CONTABLE);")
+        cols = [row["name"] for row in cursor.fetchall()]
+        if cols and "usuario_creacion" not in cols:
+            print("[DEBUG] Reestructurando TRS_ASIENTO_CONTABLE para añadir soporte de auditoria.")
+            cursor.execute("DROP TABLE IF EXISTS TRS_DETALLE_ASIENTO;")
+            cursor.execute("DROP TABLE IF EXISTS TRS_ASIENTO_CONTABLE;")
+            conn.commit()
+
         # 2. crear tabla transaccional de cabecera de asientos contables
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS TRS_ASIENTO_CONTABLE (
@@ -56,6 +64,10 @@ class AsientoModel:
                 estado VARCHAR(20) DEFAULT 'Cuadrado',
                 total_debe DECIMAL(10,2) NOT NULL DEFAULT 0.00,
                 total_haber DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                usuario_creacion VARCHAR(50),
+                fecha_creacion DATETIME,
+                usuario_modificacion VARCHAR(50),
+                fecha_modificacion DATETIME,
                 FOREIGN KEY (num_factura) REFERENCES TRS_FACTURA (num_factura) ON DELETE SET NULL
             )
         """)
@@ -74,13 +86,13 @@ class AsientoModel:
         """)
         conn.commit()
 
-        # ejecutar migración en caliente para facturas preexistentes que no tengan asiento
+        # ejecutar migracion en caliente para facturas preexistentes que no tengan asiento
         self._migrar_facturas_sin_asiento(cursor)
         conn.commit()
         conn.close()
 
     def _migrar_facturas_sin_asiento(self, cursor):
-        """Busca facturas que no tienen asiento contable asociado y les genera uno de manera retrospectiva."""
+        # busca facturas que no tienen asiento contable asociado y les genera uno
         cursor.execute("""
             SELECT f.num_factura, f.fecha_emision, f.subtotal, f.total_impuestos, f.total, f.estado
             FROM TRS_FACTURA f
@@ -93,20 +105,19 @@ class AsientoModel:
             print(f"[DEBUG] Se detectaron {len(facturas_sin)} facturas sin asiento contable. Migrando retrospectivamente...")
             for f in facturas_sin:
                 try:
-                    # crear asiento de venta
                     self.crear_asiento_para_factura(cursor, f["num_factura"], float(f["subtotal"]), float(f["total_impuestos"]), float(f["total"]), f["fecha_emision"])
-                    # si ya estaba anulada, crear también el extorno
                     if f["estado"] == "Anulada":
                         self.crear_asiento_anulacion(cursor, f["num_factura"])
                 except Exception as e:
                     print(f"[DEBUG ERROR] Error migrando asiento de factura {f['num_factura']}: {e}")
 
-    def crear_asiento_para_factura(self, cursor, num_factura, subtotal, igv, total, fecha_emision=None):
-        """Registra un asiento contable de ventas por partida doble."""
+    def crear_asiento_para_factura(self, cursor, num_factura, subtotal, igv, total, fecha_emision=None, usuario="admin"):
+        # registra un asiento contable de ventas por partida doble
         if not fecha_emision:
             fecha_emision = datetime.now().strftime("%Y-%m-%d")
+        fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # generar número de asiento ac-yyyy-xxxxx
+        # generar numero de asiento ac-yyyy-xxxxx
         anio = fecha_emision.split('-')[0]
         cursor.execute("SELECT COUNT(*) AS total FROM TRS_ASIENTO_CONTABLE WHERE num_asiento LIKE ?", (f"AC-{anio}-%",))
         siguiente = cursor.fetchone()["total"] + 1
@@ -115,29 +126,28 @@ class AsientoModel:
 
         # 1. insertar cabecera de asiento
         cursor.execute("""
-            INSERT INTO TRS_ASIENTO_CONTABLE (num_asiento, fecha, glosa, num_factura, estado, total_debe, total_haber)
-            VALUES (?, ?, ?, ?, 'Cuadrado', ?, ?)
-        """, (num_asiento, fecha_emision, glosa, num_factura, total, total))
+            INSERT INTO TRS_ASIENTO_CONTABLE (
+                num_asiento, fecha, glosa, num_factura, estado, total_debe, total_haber, 
+                usuario_creacion, fecha_creacion
+            ) VALUES (?, ?, ?, ?, 'Cuadrado', ?, ?, ?, ?)
+        """, (num_asiento, fecha_emision, glosa, num_factura, total, total, usuario, fecha_actual))
         id_asiento = cursor.lastrowid
 
-        # obtener ids de las cuentas contables (1212, 40111, 70111)
+        # obtener ids de las cuentas contables (1212 40111 70111)
         cursor.execute("SELECT id_cuenta, codigo FROM MAE_CUENTA_CONTABLE WHERE codigo IN ('1212', '40111', '70111')")
         cuentas_map = {row["codigo"]: row["id_cuenta"] for row in cursor.fetchall()}
 
-        # 2. insertar detalle de asiento (venta estándar: 1212 debe, 40111 haber, 70111 haber)
-        # cuenta 1212 (clientes)
+        # 2. insertar detalle de asiento (1212 debe 40111 haber 70111 haber)
         cursor.execute("""
             INSERT INTO TRS_DETALLE_ASIENTO (id_asiento, id_cuenta, debe, haber)
             VALUES (?, ?, ?, 0.00)
         """, (id_asiento, cuentas_map['1212'], total))
 
-        # cuenta 40111 (igv)
         cursor.execute("""
             INSERT INTO TRS_DETALLE_ASIENTO (id_asiento, id_cuenta, debe, haber)
             VALUES (?, ?, 0.00, ?)
         """, (id_asiento, cuentas_map['40111'], igv))
 
-        # cuenta 70111 (ventas)
         cursor.execute("""
             INSERT INTO TRS_DETALLE_ASIENTO (id_asiento, id_cuenta, debe, haber)
             VALUES (?, ?, 0.00, ?)
@@ -146,9 +156,8 @@ class AsientoModel:
         print(f"[DEBUG] Asiento contable de venta {num_asiento} registrado con éxito.")
         return num_asiento
 
-    def crear_asiento_anulacion(self, cursor, num_factura):
-        """Registra un asiento de extorno (asiento contable inverso) para netear la contabilidad."""
-        # consultar la cabecera de la factura original
+    def crear_asiento_anulacion(self, cursor, num_factura, usuario="admin"):
+        # registra un asiento de extorno (asiento contable inverso) para netear la contabilidad
         cursor.execute("SELECT subtotal, total_impuestos, total, fecha_emision FROM TRS_FACTURA WHERE num_factura = ?", (num_factura,))
         fact = cursor.fetchone()
         if not fact:
@@ -158,8 +167,9 @@ class AsientoModel:
         igv = float(fact["total_impuestos"])
         total = float(fact["total"])
         fecha_actual = datetime.now().strftime("%Y-%m-%d")
+        fecha_actual_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # generar número de asiento de extorno ac-ext-yyyy-xxxxx
+        # generar numero de asiento de extorno ac-ext-yyyy-xxxxx
         anio = fecha_actual.split('-')[0]
         cursor.execute("SELECT COUNT(*) AS total FROM TRS_ASIENTO_CONTABLE WHERE num_asiento LIKE ?", (f"AC-EXT-{anio}-%",))
         siguiente = cursor.fetchone()["total"] + 1
@@ -168,29 +178,28 @@ class AsientoModel:
 
         # 1. insertar cabecera de asiento de extorno
         cursor.execute("""
-            INSERT INTO TRS_ASIENTO_CONTABLE (num_asiento, fecha, glosa, num_factura, estado, total_debe, total_haber)
-            VALUES (?, ?, ?, ?, 'Cuadrado', ?, ?)
-        """, (num_asiento, fecha_actual, glosa, num_factura, total, total))
+            INSERT INTO TRS_ASIENTO_CONTABLE (
+                num_asiento, fecha, glosa, num_factura, estado, total_debe, total_haber, 
+                usuario_creacion, fecha_creacion
+            ) VALUES (?, ?, ?, ?, 'Cuadrado', ?, ?, ?, ?)
+        """, (num_asiento, fecha_actual, glosa, num_factura, total, total, usuario, fecha_actual_timestamp))
         id_asiento = cursor.lastrowid
 
-        # obtener ids de las cuentas contables (1212, 40111, 70111)
+        # obtener ids de las cuentas contables (1212 40111 70111)
         cursor.execute("SELECT id_cuenta, codigo FROM MAE_CUENTA_CONTABLE WHERE codigo IN ('1212', '40111', '70111')")
         cuentas_map = {row["codigo"]: row["id_cuenta"] for row in cursor.fetchall()}
 
-        # 2. insertar detalle de asiento extorno (contrario: 1212 haber, 40111 debe, 70111 debe)
-        # cuenta 1212 (clientes)
+        # 2. insertar detalle de asiento extorno (1212 haber 40111 debe 70111 debe)
         cursor.execute("""
             INSERT INTO TRS_DETALLE_ASIENTO (id_asiento, id_cuenta, debe, haber)
             VALUES (?, ?, 0.00, ?)
         """, (id_asiento, cuentas_map['1212'], total))
 
-        # cuenta 40111 (igv)
         cursor.execute("""
             INSERT INTO TRS_DETALLE_ASIENTO (id_asiento, id_cuenta, debe, haber)
             VALUES (?, ?, ?, 0.00)
         """, (id_asiento, cuentas_map['40111'], igv))
 
-        # cuenta 70111 (ventas)
         cursor.execute("""
             INSERT INTO TRS_DETALLE_ASIENTO (id_asiento, id_cuenta, debe, haber)
             VALUES (?, ?, ?, 0.00)
@@ -200,12 +209,11 @@ class AsientoModel:
         return num_asiento
 
     def obtener_asiento_por_factura(self, num_factura):
-        """Retorna todos los asientos contables asociados a una factura (el original y el extorno si existe)."""
+        # retorna todos los asientos contables asociados a una factura
         conn = self._get_connection()
         cursor = conn.cursor()
         
         try:
-            # obtener cabeceras de asiento
             cursor.execute("""
                 SELECT id_asiento, num_asiento, fecha, glosa, estado, total_debe, total_haber
                 FROM TRS_ASIENTO_CONTABLE
@@ -214,7 +222,6 @@ class AsientoModel:
             """, (num_factura,))
             cabeceras = [dict(row) for row in cursor.fetchall()]
 
-            # para cada cabecera, obtener sus detalles correspondientes
             asientos_completos = []
             for cab in cabeceras:
                 cursor.execute("""

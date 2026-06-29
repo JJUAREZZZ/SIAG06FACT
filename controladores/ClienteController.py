@@ -7,12 +7,12 @@ class ClienteController:
         self.model = model
         self.view = view
         
-        # parámetros de paginación
+        # parametros de paginacion
         self.items_por_pagina = 10
         self.pagina_actual = 1
         self.clientes_filtrados = []
 
-        # conexión con los triggers de la interfaz
+        # conexion con los triggers de la interfaz
         self.view.btn_abrir_formulario.clicked.connect(self.mostrar_formulario_emergente)
         self.view.btn_modificar.clicked.connect(self.modificar_cliente)
         self.view.btn_cambiar_estado.clicked.connect(self.alternar_estado_cliente)
@@ -20,7 +20,7 @@ class ClienteController:
         self.view.input_buscar.textChanged.connect(self.filtrar_datos)
         self.view.combo_categoria.currentTextChanged.connect(self.filtrar_datos)
 
-        # conectar botones de paginación
+        # conectar botones de paginacion
         self.view.btn_pag_prev.clicked.connect(self.pagina_anterior)
         self.view.btn_pag_next.clicked.connect(self.pagina_siguiente)
         for idx, btn in enumerate(self.view.pag_buttons):
@@ -37,7 +37,7 @@ class ClienteController:
             datos = dialogo.obtener_datos()
             dni_ruc, nombre_razon_social, direccion, email, telefono = datos
             
-            # validación robusta
+            # validacion robusta
             if not dni_ruc or not nombre_razon_social:
                 self.mostrar_alerta("Campos Requeridos", "El DNI/RUC y el Nombre/Razón Social son obligatorios.")
                 return
@@ -79,7 +79,7 @@ class ClienteController:
             datos = dialogo.obtener_datos()
             _, nombre_razon_social, direccion, email, telefono = datos
             
-            # validación robusta
+            # validacion robusta
             if not nombre_razon_social:
                 self.mostrar_alerta("Campos Requeridos", "El Nombre o Razón Social es obligatorio.")
                 return
@@ -92,7 +92,7 @@ class ClienteController:
                 self.mostrar_alerta("Error al Actualizar", f"No se pudo actualizar el cliente en SQLite:\n{e}")
 
     def alternar_estado_cliente(self):
-        """Captura la selección de la tabla y cambia el estado dinámicamente."""
+        """captura la seleccion de la tabla y cambia el estado dinamicamente."""
         seleccion = self.view.obtener_cliente_seleccionado()
         if not seleccion:
             self.mostrar_alerta("Selección Requerida", "Debes seleccionar un cliente de la lista para cambiar su estado.")
@@ -162,7 +162,7 @@ class ClienteController:
         inactivos = total - activos
         self.view.lbl_info_clientes.setText(f"Total items(clientes): {total}  |  Clientes activos: {activos}  |  Clientes inactivos: {inactivos}")
 
-        # recargar tabla con paginación
+        # recargar tabla con paginacion
         self.pagina_actual = 1
         self.cargar_tabla_paginada()
 

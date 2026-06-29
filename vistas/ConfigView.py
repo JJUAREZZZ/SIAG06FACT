@@ -5,9 +5,9 @@ from PyQt6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLineEdit,
 from PyQt6.QtCore import Qt, QSize, QPropertyAnimation, QRectF, QEasingCurve, pyqtProperty
 from PyQt6.QtGui import QColor, QFont, QPixmap, QPainter, QBrush, QPen
 
-# ══════════════════════════════════════════════════════
+#
 # interruptor deslizante personalizado (wow style)
-# ══════════════════════════════════════════════════════
+#
 class ToggleSwitch(QAbstractButton):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -52,21 +52,21 @@ class ToggleSwitch(QAbstractButton):
         painter.drawEllipse(QRectF(self._thumb_position, 3, 18, 18))
 
 
-# ══════════════════════════════════════════════════════
+#
 # formulario modal registro nuevo usuario
-# ══════════════════════════════════════════════════════
+#
 class FormularioUsuarioDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Añadir nuevo operador")
-        self.setFixedSize(400, 360)
+        self.setWindowTitle("Añadir nuevo usuario")
+        self.setFixedSize(400, 390)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
         self.setStyleSheet("background-color: white;")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        lbl_title = QLabel("Registrar Operador")
+        lbl_title = QLabel("Registrar Usuario")
         lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1B2A4A; margin-bottom: 10px;")
         layout.addWidget(lbl_title)
 
@@ -80,10 +80,28 @@ class FormularioUsuarioDialog(QDialog):
         self.input_password.setPlaceholderText("Contraseña (Obligatorio)")
         self.input_password.setEchoMode(QLineEdit.EchoMode.Password)
 
+        self.input_rol = QComboBox()
+        self.input_rol.addItems(["Operador", "Administrador", "Usuario"])
+
         style_input = "QLineEdit { padding: 5px 8px; border: 1px solid #CCD1D9; border-radius: 4px; background: #F4F6F9; color: black; font-size: 13px; min-height: 28px; }"
+        style_combo = """
+            QComboBox { padding: 5px 8px; border: 1px solid #CCD1D9; border-radius: 4px; background: #F4F6F9; color: black; font-size: 13px; min-height: 28px; }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                border: 1px solid #CCD1D9;
+                selection-background-color: #1B2A4A;
+                selection-color: white;
+                padding: 4px;
+            }
+        """
+        
         for inp in [self.input_nombre, self.input_username, self.input_email, self.input_password]:
             inp.setStyleSheet(style_input)
             layout.addWidget(inp)
+
+        self.input_rol.setStyleSheet(style_combo)
+        layout.addWidget(self.input_rol)
 
         layout.addSpacing(10)
 
@@ -105,16 +123,17 @@ class FormularioUsuarioDialog(QDialog):
             self.input_nombre.text().strip(),
             self.input_username.text().strip(),
             self.input_email.text().strip(),
-            self.input_password.text().strip()
+            self.input_password.text().strip(),
+            self.input_rol.currentText()
         )
 
 
-# ══════════════════════════════════════════════════════
+#
 # vista principal de configuracion
-# ══════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════
+#
+#
 # vista principal de configuracion
-# ══════════════════════════════════════════════════════
+#
 class ConfigView(QWidget):
     def __init__(self):
         super().__init__()
@@ -177,7 +196,7 @@ class ConfigView(QWidget):
         cols_layout = QHBoxLayout()
         cols_layout.setSpacing(20)
 
-        # columna izquierda (datos empresa + roles)
+        # columna izquierda (datos empresa  roles)
         col_izq = QVBoxLayout()
         col_izq.setSpacing(14)
 
@@ -242,7 +261,7 @@ class ConfigView(QWidget):
         empresa_lay.addLayout(grid_emp)
         col_izq.addWidget(empresa_frame)
 
-        # 2. gestión de usuarios y roles
+        # 2. gestion de usuarios y roles
         usuarios_frame = QFrame()
         usuarios_frame.setObjectName("SeccionFrame")
         usuarios_lay = QVBoxLayout(usuarios_frame)
@@ -250,7 +269,7 @@ class ConfigView(QWidget):
 
         usuarios_hdr = QHBoxLayout()
         usuarios_hdr.addWidget(QLabel("Gestión de usuarios y roles", styleSheet="font-size: 15px; color: #1B2A4A;"))
-        self.btn_añadir_usuario = QPushButton("Añadir operador")
+        self.btn_añadir_usuario = QPushButton("Añadir usuario")
         self.btn_añadir_usuario.setStyleSheet("QPushButton { background-color: #70AD47; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: none; } QPushButton:hover { background-color: #5B9337; }")
         self.btn_toggle_usuario = QPushButton("Activar / Inactivar")
         self.btn_toggle_usuario.setStyleSheet("QPushButton { background-color: #1B2A4A; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: none; } QPushButton:hover { background-color: #2C3E6B; }")
@@ -271,7 +290,7 @@ class ConfigView(QWidget):
 
         cols_layout.addLayout(col_izq, 4)
 
-        # columna derecha (módulos y seguridad)
+        # columna derecha (modulos y seguridad)
         col_der = QVBoxLayout()
         col_der.setSpacing(14)
 
@@ -283,6 +302,44 @@ class ConfigView(QWidget):
         seguridad_hdr = QHBoxLayout()
         seguridad_hdr.addWidget(QLabel("Módulos y seguridad", styleSheet="font-size: 15px; color: #1B2A4A;"))
         col_der.addWidget(seguridad_frame)
+
+        impresion_frame = QFrame()
+        impresion_frame.setObjectName("SeccionFrame")
+        impresion_lay = QVBoxLayout(impresion_frame)
+        impresion_lay.setContentsMargins(15, 15, 15, 15)
+        impresion_lay.setSpacing(10)
+
+        lbl_imp_title = QLabel("Impresión y Procesos Contables")
+        lbl_imp_title.setStyleSheet("font-size: 15px; color: #1B2A4A; font-weight: bold;")
+        impresion_lay.addWidget(lbl_imp_title)
+
+        formato_layout = QHBoxLayout()
+        formato_layout.addWidget(QLabel("Formato impresión por defecto:"))
+        self.combo_formato_defecto = QComboBox()
+        self.combo_formato_defecto.addItems(["Impresora Láser (A4)", "Impresora Térmica (Ticket 80mm)"])
+        self.combo_formato_defecto.setStyleSheet("""
+            QComboBox { padding: 4px 7px; border: 1px solid #CCD1D9; border-radius: 4px; background: white; color: black; font-size: 13px; min-height: 28px; }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                border: 1px solid #CCD1D9;
+                selection-background-color: #1B2A4A;
+                selection-color: white;
+                padding: 4px;
+            }
+        """)
+        formato_layout.addWidget(self.combo_formato_defecto)
+        impresion_lay.addLayout(formato_layout)
+
+        self.btn_generar_ple = QPushButton("Generar Registro de Ventas PLE/SIRE")
+        self.btn_generar_ple.setStyleSheet("QPushButton { background-color: #1B2A4A; color: white; font-weight: bold; padding: 8px 12px; border-radius: 4px; border: none; } QPushButton:hover { background-color: #2C3E6B; }")
+        impresion_lay.addWidget(self.btn_generar_ple)
+
+        self.btn_respaldar_bd = QPushButton("Respaldar Base de Datos (SQL Dump)")
+        self.btn_respaldar_bd.setStyleSheet("QPushButton { background-color: #1B2A4A; color: white; font-weight: bold; padding: 8px 12px; border-radius: 4px; border: none; } QPushButton:hover { background-color: #2C3E6B; }")
+        impresion_lay.addWidget(self.btn_respaldar_bd)
+
+        col_der.addWidget(impresion_frame)
 
         # toggles grid
         toggles_grid = QGridLayout()

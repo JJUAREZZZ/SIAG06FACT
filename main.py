@@ -4,6 +4,21 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QStackedWidget, QDialog
+from PyQt6.QtCore import QObject, QEvent, QTimer
+
+class InactivityFilter(QObject):
+    def __init__(self, timer, parent=None):
+        super().__init__(parent)
+        self.timer = timer
+        
+    def eventFilter(self, obj, event):
+        # reiniciar temporizador ante cualquier evento de interaccion del usuario
+        if event.type() in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease,
+                            QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease,
+                            QEvent.Type.MouseMove, QEvent.Type.Wheel,
+                            QEvent.Type.MouseButtonDblClick):
+            self.timer.start()
+        return False
 
 from modelos.usuario_model import UsuarioModel
 from vistas.LoginView import LoginView, RegistroInicialView
@@ -36,7 +51,7 @@ from controladores.HistorialController import HistorialController
 def main():
     app = QApplication(sys.argv)
 
-    # aca se carga el modelo del login osea las contraseñas y usuarios encryptados
+    # aca se carga el modelo del login osea las contrasenas y usuarios encryptados
     login_model = UsuarioModel()
 
     # aca se carga el modelo del login denuevo
@@ -57,6 +72,15 @@ def main():
     # pantalla obligatoria de login
     if login_view.exec() != QDialog.DialogCode.Accepted:
         return # si se falla el login o cierra la ventana se cancela la ejecucion
+
+    # establecer sesion activa del usuario en el servicio de seguridad
+    usuario_autenticado = login_ctrl.get_usuario_autenticado()
+    from controladores.SecurityService import SecurityService
+    SecurityService.set_usuario_actual(usuario_autenticado)
+
+    # registrar log de inicio de sesion en la auditoria
+    from controladores.AuditoriaService import AuditoriaService
+    AuditoriaService.registrar("INICIO_SESION", "sesion")
 
     # esta parte de aca se ejecuta despues de loguear con exito
     window = QMainWindow()
@@ -92,7 +116,7 @@ def main():
     historial_view = HistorialView()
     historial_ctrl = HistorialController(factura_model, historial_view)
 
-    # se crea el stacked widget con todos los módulos
+    # se crea el stacked widget con todos los modulos
     stacked = QStackedWidget()
     stacked.addWidget(dashboard_view.contenido_widget) # 0
     stacked.addWidget(factura_view.contenido_widget)   # 1
@@ -124,11 +148,16 @@ def main():
     }
 
     def navegar(indice: int):
+        # validar que el modulo este permitido para el rol activo
+        from controladores.SecurityService import SecurityService
+        if indice not in SecurityService.obtener_indices_permitidos():
+            return
+            
         stacked.setCurrentIndex(indice)
         for idx, btn in nav_buttons.items():
             btn.setStyleSheet(NAV_STYLE_ACTIVE if idx == indice else NAV_STYLE_NORMAL)
         
-        # refrescar datos en caliente al cambiar de módulo
+        # refrescar datos en caliente al cambiar de modulo
         if indice == 0:
             dashboard_ctrl.actualizar_modulo()
         elif indice == 1:
@@ -142,6 +171,16 @@ def main():
         elif indice == 5:
             config_ctrl.actualizar_modulo()
 
+    def aplicar_permisos_sidebar():
+        # oculta botones de la barra lateral no autorizados para el rol activo
+        from controladores.SecurityService import SecurityService
+        permitidos = SecurityService.obtener_indices_permitidos()
+        for idx, btn in nav_buttons.items():
+            if idx in permitidos:
+                btn.setVisible(True)
+            else:
+                btn.setVisible(False)
+
     cliente_view.btn_menu_dashboard.clicked.connect(lambda: navegar(0))
     cliente_view.btn_menu_nueva_factura.clicked.connect(lambda: navegar(1))
     cliente_view.btn_menu_historial.clicked.connect(lambda: navegar(2))
@@ -149,8 +188,58 @@ def main():
     cliente_view.btn_menu_clientes.clicked.connect(lambda: navegar(4))
     cliente_view.btn_menu_config.clicked.connect(lambda: navegar(5))
 
-    # iniciar en el dashboard por defecto
-    navegar(0)
+    # aplicar permisos al inicio
+    aplicar_permisos_sidebar()
+
+    # iniciar en el modulo permitido por defecto
+    from controladores.SecurityService import SecurityService
+    permitidos = SecurityService.obtener_indices_permitidos()
+    default_idx = 0 if 0 in permitidos else permitidos[0]
+    navegar(default_idx)
+
+    # configurar temporizador de inactividad de cinco minutos
+    inactivity_timer = QTimer()
+    # cinco minutos en milisegundos
+    inactivity_timer.setInterval(5 * 60 * 1000)
+    inactivity_timer.setSingleShot(True)
+
+    def bloquear_pantalla():
+        # bloquear pantalla por inactividad
+        from controladores.SecurityService import SecurityService
+        from controladores.AuditoriaService import AuditoriaService
+        
+        AuditoriaService.registrar("BLOQUEO_INACTIVIDAD", "sesion")
+        SecurityService.set_usuario_actual(None)
+        
+        # limpiar campos de login para el siguiente ingreso
+        login_view.input_usuario.clear()
+        login_view.input_password.clear()
+        
+        inactivity_timer.stop()
+        
+        if login_view.exec() == QDialog.DialogCode.Accepted:
+            usr = login_ctrl.get_usuario_autenticado()
+            SecurityService.set_usuario_actual(usr)
+            AuditoriaService.registrar("DESBLOQUEO_SESION", "sesion")
+            aplicar_permisos_sidebar()
+            
+            # volver a navegar al default index tras desbloquear
+            perm_desb = SecurityService.obtener_indices_permitidos()
+            def_idx_desb = 0 if 0 in perm_desb else perm_desb[0]
+            navegar(def_idx_desb)
+            
+            inactivity_timer.start()
+        else:
+            AuditoriaService.registrar("SALIDA_SISTEMA", "sesion")
+            QApplication.quit()
+            sys.exit(0)
+
+    inactivity_timer.timeout.connect(bloquear_pantalla)
+
+    # instalar el filtro de eventos en la aplicacion
+    inactivity_filter = InactivityFilter(inactivity_timer)
+    app.installEventFilter(inactivity_filter)
+    inactivity_timer.start()
 
     main_layout.addWidget(sidebar)
     main_layout.addWidget(stacked)

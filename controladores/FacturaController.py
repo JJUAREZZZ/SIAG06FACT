@@ -6,8 +6,8 @@ from vistas.FacturaView import BusquedaPopup
 
 class FacturaController:
     """
-    Orquesta la lógica de negocio de la pantalla Nueva Factura.
-    Sincronizado milimétricamente con el modelo transaccional TRS_ y MAE_.
+    orquesta la logica de negocio de la pantalla nueva factura.
+    sincronizado milimetricamente con el modelo transaccional trs_ y mae_.
     """
 
     def __init__(self, model, view, cliente_model, producto_model):
@@ -16,10 +16,11 @@ class FacturaController:
         self.cliente_model  = cliente_model
         self.producto_model = producto_model
 
-        # estado interno de la sesión de venta
+        # estado interno de la sesion de venta
         self._cliente_actual  = None   # dict con datos del cliente seleccionado
         self._producto_actual = None   # dict con datos del producto seleccionado
-        self._items           = []     # lista de dicts: cada ítem agregado a la factura
+        self._items           = []     # lista de dicts: cada item agregado a la factura
+        self._totales         = (0.0, 0.0, 0.0, 0.0)
 
         # inicializar tasa y moneda base activa
         try:
@@ -29,34 +30,58 @@ class FacturaController:
             self._tasa_igv_activa = 18.00
             self._moneda_activa = {"simbolo": "S/", "codigo_iso": "PEN"}
 
-        # número de factura automatizado
+        # numero de factura automatizado
         self._actualizar_numero_factura()
 
-        # conectar señales de la vista a los métodos del controlador
+        # conectar senales de la vista a los metodos del controlador
         self.view.btn_buscar_cliente.clicked.connect(self._abrir_busqueda_cliente)
         self.view.btn_buscar_prod.clicked.connect(self._abrir_busqueda_producto)
         self.view.btn_agregar_item.clicked.connect(self._agregar_item)
         self.view.btn_generar_final.clicked.connect(self._emitir_factura)
         self.view.btn_cancelar.clicked.connect(self._cancelar)
 
-        # recalcular totales si se elimina una fila desde el botón ✕ de la tabla gráfico
+        # conectar eventos de combo de tipo comprobante y moneda
+        self.view.combo_tipo_comprobante.currentTextChanged.connect(self._actualizar_numero_factura)
+        self.view.combo_moneda.currentTextChanged.connect(self._on_moneda_changed)
+
+        # recalcular totales si se elimina una fila desde el boton  de la tabla grafico
         self.view.fila_eliminada_index.connect(self._eliminar_item_carrito)
 
     #
-    # gestión de numeración de comprobantes
+    # gestion de numeracion de comprobantes
     #
     def _actualizar_numero_factura(self):
-        """Genera el siguiente número de factura consultando el histórico del modelo."""
+        """genera el siguiente numero de factura consultando el historico del modelo."""
         try:
-            siguiente = self.model.obtener_siguiente_correlativo()
+            tipo_doc = self.view.combo_tipo_comprobante.currentText()
+            siguiente = self.model.obtener_siguiente_correlativo(tipo_doc)
         except Exception:
             siguiente = 1
-        codigo = f"F001-{siguiente:05d}"
+        serie = "F001" if "Factura" in tipo_doc else "B001"
+        codigo = f"{serie}-{siguiente:05d}"
         self.view.lbl_num_factura.setText(codigo)
         self._num_factura = codigo
 
+    def _on_moneda_changed(self):
+        txt = self.view.combo_moneda.currentText()
+        simbolo = "S/" if "PEN" in txt else "$"
+        self.view.set_simbolo_moneda(simbolo)
+        if self._producto_actual:
+            self.view.set_producto(self._producto_actual)
+        self._recalcular_totales()
+        self._actualizar_tabla_items()
+
+    def _actualizar_tabla_items(self):
+        self.view.tabla_detalle.setRowCount(0)
+        for it in self._items:
+            self.view.agregar_fila_tabla(
+                it["codigo"], it["nombre"],
+                it["cantidad"], it["precio_unitario"],
+                it["descuento_pct"], it["subtotal"]
+            )
+
     #
-    # búsqueda interactiva de clientes (mae_cliente)
+    # busqueda interactiva de clientes (mae_cliente)
     #
     def _abrir_busqueda_cliente(self):
         popup = BusquedaPopup(
@@ -65,7 +90,7 @@ class FacturaController:
             self.view
         )
         clientes = self.cliente_model.obtener_todos()
-        # filtrado estricto por regulación: solo clientes en estado activo
+        # filtrado estricto por regulacion: solo clientes en estado activo
         activos = [c for c in clientes if c.get("estado", "Activo") == "Activo"]
         filas = [
             {
@@ -90,7 +115,7 @@ class FacturaController:
                 break
 
     #
-    # búsqueda interactiva de productos (mae_producto)
+    # busqueda interactiva de productos (mae_producto)
     #
     def _abrir_busqueda_producto(self):
         popup = BusquedaPopup(
@@ -99,7 +124,7 @@ class FacturaController:
             self.view
         )
         productos = self.producto_model.obtener_todos()
-        # solo mostrar productos con stock disponible y activos en el catálogo
+        # solo mostrar productos con stock disponible y activos en el catalogo
         filas = [
             {
                 "codigo":         p["codigo"],
@@ -115,7 +140,7 @@ class FacturaController:
         popup.exec()
 
     def _on_producto_seleccionado(self, datos: dict):
-        # recuperar el objeto relacional completo (incluye afectación tributaria e impuestos extras)
+        # recuperar el objeto relacional completo (incluye afectacion tributaria e impuestos extras)
         productos = self.producto_model.obtener_todos()
         for p in productos:
             if p["codigo"] == datos["codigo"]:
@@ -124,7 +149,7 @@ class FacturaController:
                 break
 
     #
-    # operación: adición de ítems al detalle comercial
+    # operacion: adicion de items al detalle comercial
     #
     def _agregar_item(self):
         if not self._cliente_actual:
@@ -169,12 +194,15 @@ class FacturaController:
             )
             return
 
-        # cálculo logístico y tributario dinámico por ítem (sunat)
+        # calculo logistico y tributario dinamico por item (sunat)
         precio_uni = float(prod["precio_unitario"])
+        if precio_uni <= 0:
+            self._msg_warn("El precio del producto debe ser mayor a cero.")
+            return
         descuento_monto = precio_uni * cantidad * (descuento_pct / 100)
         subtotal_neto = precio_uni * cantidad - descuento_monto
 
-        # 1. determinar tasa de igv activa (0.00 si el producto está exonerado/inafecto)
+        # 1. determinar tasa de igv activa (0.00 si el producto esta exonerado/inafecto)
         es_exonerado = (float(prod.get("impuesto_porcentaje", 18.00)) == 0.0)
         tasa_igv = 0.00 if es_exonerado else self._tasa_igv_activa
 
@@ -185,7 +213,7 @@ class FacturaController:
         if isc_fijo_unit > 0:
             if volumen_litros > 0:
                 total_volumen_litros = cantidad * volumen_litros
-                # conversión oficial sunat: 1 galón = 3.785411784 litros
+                # conversion oficial sunat: 1 galon  3.785411784 litros
                 total_galones = total_volumen_litros / 3.785411784
                 isc_monto_fijo_total = total_galones * isc_fijo_unit
             else:
@@ -193,18 +221,18 @@ class FacturaController:
         else:
             isc_monto_fijo_total = 0.0
 
-        # 3. calcular isc ad valorem (%)
+        # 3. calcular isc ad valorem ()
         tasa_ad_valorem = float(prod.get("impuesto_extra", 0.00))
         isc_ad_valorem_total = subtotal_neto * (tasa_ad_valorem / 100.0)
 
-        # isc total de la línea
+        # isc total de la linea
         isc_total = isc_monto_fijo_total + isc_ad_valorem_total
 
-        # 4. base imponible para el igv (en perú, el isc forma parte de la base imponible del igv)
+        # 4. base imponible para el igv (en peru el isc forma parte de la base imponible del igv)
         base_imponible_igv = subtotal_neto + isc_total
         igv_total = base_imponible_igv * (tasa_igv / 100.0)
 
-        # el impuesto total de la línea es la suma de igv e isc
+        # el impuesto total de la linea es la suma de igv e isc
         monto_impuesto_linea = igv_total + isc_total
 
         item = {
@@ -222,7 +250,7 @@ class FacturaController:
         }
         self._items.append(item)
 
-        # pintar fila en la vista gráfica
+        # pintar fila en la vista grafica
         self.view.agregar_fila_tabla(
             prod["codigo"], prod["nombre"],
             cantidad, precio_uni, descuento_pct, subtotal_neto
@@ -230,11 +258,11 @@ class FacturaController:
         self._recalcular_totales()
 
     #
-    # sincronización reactiva por remoción de filas
+    # sincronizacion reactiva por remocion de filas
     #
     def _eliminar_item_carrito(self, index):
         """
-        Elimina el producto del carrito en memoria basándose en su índice
+        elimina el producto del carrito en memoria basandose en su indice
         y recalcula los totales de la factura.
         """
         if 0 <= index < len(self._items):
@@ -242,14 +270,14 @@ class FacturaController:
         self._recalcular_totales()
 
     #
-    # consolidación contable de totales
+    # consolidacion contable de totales
     #
     def _recalcular_totales(self):
-        """Suma las líneas calculando la base imponible y acumula los impuestos específicos."""
+        """suma las lineas calculando la base imponible y acumula los impuestos especificos."""
         subtotal_bruto  = sum(it["precio_unitario"] * it["cantidad"] for it in self._items)
         total_descuento = sum(it["descuento_monto"] for it in self._items)
         
-        # acumulación limpia de impuestos individuales de cada producto
+        # acumulacion limpia de impuestos individuales de cada producto
         total_impuestos = sum(it["monto_impuesto_linea"] for it in self._items)
         
         base_imponible  = subtotal_bruto - total_descuento
@@ -270,11 +298,28 @@ class FacturaController:
             self._msg_warn("Agrega al menos un producto a la factura.")
             return
 
-        # ventana modal de confirmación con estilos correctos
+        tipo_doc = self.view.combo_tipo_comprobante.currentText()
+        forma_pago = self.view.combo_forma_pago.currentText()
+        metodo_pago = self.view.combo_metodo_pago.currentText()
+        moneda_texto = self.view.combo_moneda.currentText()
+        moneda_iso = moneda_texto.split()[0]
+
+        # validacion sunat de consistencia tributaria
+        doc_cliente = self._cliente_actual["dni_ruc"]
+        if tipo_doc == "Factura Electrónica":
+            if len(doc_cliente) != 11:
+                self._msg_warn("Regla Tributaria SUNAT: Las Facturas Electrónicas solo pueden emitirse a clientes con RUC (11 dígitos).")
+                return
+        elif tipo_doc == "Boleta de Venta":
+            if len(doc_cliente) not in (8, 11):
+                self._msg_warn("Regla Tributaria SUNAT: Las Boletas de Venta requieren DNI (8 dígitos) o RUC (11 dígitos).")
+                return
+
+        # ventana modal de confirmacion con estilos correctos
         box_confirmar = QMessageBox(self.view)
         box_confirmar.setIcon(QMessageBox.Icon.Question)
         box_confirmar.setWindowTitle("Confirmar emisión")
-        box_confirmar.setText(f"¿Desea emitir la factura {self._num_factura} para\n"
+        box_confirmar.setText(f"¿Desea emitir la {tipo_doc} {self._num_factura} para\n"
                               f"{self._cliente_actual['nombre_razon_social']}?\n\n"
                               f"Importe Total: {self.view.simbolo_moneda} {self._totales[3]:.2f}")
         box_confirmar.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -288,8 +333,8 @@ class FacturaController:
         cliente_id = self._cliente_actual["dni_ruc"]
         base_netilla = subtotal_bruto - total_desc
 
-        # paquete ordenado para la transacción atómica del modelo:
-        # (codigo, cantidad, precio_unitario, descuento_monto, tasa_impuesto, monto_impuesto_linea)
+        # paquete ordenado para la transaccion atomica del modelo:
+        # (codigo cantidad precio_unitario descuento_monto tasa_impuesto monto_impuesto_linea)
         items_modelo = [
             (
                 it["codigo"], 
@@ -302,18 +347,62 @@ class FacturaController:
             for it in self._items
         ]
 
-        # envío seguro al modelo, inmune a sql injection
+        # generar cuotas para ventas al credito
+        cuotas = []
+        if forma_pago == "Crédito":
+            from PyQt6.QtCore import QDate
+            vencimiento = QDate.currentDate().addDays(30).toString("yyyy-MM-dd")
+            cuotas.append({
+                "numero": 1,
+                "monto": total,
+                "vencimiento": vencimiento
+            })
+
+        # obtener usuario actual de la sesion
+        from controladores.SecurityService import SecurityService
+        usr_obj = SecurityService.get_usuario_actual()
+        usr_name = usr_obj.get("username", "admin") if usr_obj else "admin"
+
+        # envio seguro al modelo inmune a sql injection
         exito, resultado = self.model.registrar_factura(
-            cliente_id, base_netilla, impuestos, total, items_modelo
+            cliente_id, base_netilla, impuestos, total, items_modelo,
+            tipo_documento=tipo_doc, forma_pago=forma_pago, metodo_pago=metodo_pago,
+            usuario=usr_name, cuotas=cuotas, moneda_iso=moneda_iso,
+            monto_descuento=total_desc
         )
 
         if exito:
-            box = QMessageBox(self.view)
-            box.setIcon(QMessageBox.Icon.Information)
-            box.setWindowTitle("Factura emitida")
-            box.setText(f"✔ Comprobante {self._num_factura} emitido correctamente.\nCódigo de auditoría: {resultado}")
-            self._estilo_alerta(box)
-            box.exec()
+            # 1. generar datos de factura para impresion y xml
+            factura_completa = self.model.obtener_factura_por_numero(resultado)
+            
+            # 2. generar xml ubl 2.1 estandar de sunat
+            from controladores import ImpresionHelper
+            try:
+                xml_path = ImpresionHelper.generar_xml_ubl_sunat(factura_completa)
+                print(f"[DEBUG] XML UBL 2.1 generado correctamente: {xml_path}")
+            except Exception as e:
+                print(f"[DEBUG ERROR] No se pudo generar el XML UBL 2.1: {e}")
+                self._msg_warn(f"Advertencia: No se pudo generar el archivo XML SUNAT: {e}")
+
+            # 3. preguntar si desea imprimir comprobante
+            box_imprimir = QMessageBox(self.view)
+            box_imprimir.setIcon(QMessageBox.Icon.Question)
+            box_imprimir.setWindowTitle("Comprobante emitido")
+            box_imprimir.setText(f"✔ Comprobante {resultado} emitido correctamente.\n"
+                                 f"¿Desea imprimir el comprobante en este momento?")
+            box_imprimir.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            box_imprimir.setDefaultButton(QMessageBox.StandardButton.Yes)
+            self._estilo_alerta(box_imprimir)
+            
+            if box_imprimir.exec() == QMessageBox.StandardButton.Yes:
+                try:
+                    formato_def = self.model.obtener_formato_impresion()
+                except Exception:
+                    formato_def = "A4"
+                
+                formato_imp = "Ticket" if "Ticket" in formato_def else "A4"
+                ImpresionHelper.imprimir_factura_html(factura_completa, formato_impresion=formato_imp, parent_widget=self.view)
+
             self._reset()
         else:
             box = QMessageBox(self.view)
@@ -324,7 +413,7 @@ class FacturaController:
             box.exec()
 
     #
-    # gestión de cancelaciones de estado
+    # gestion de cancelaciones de estado
     #
     def _cancelar(self):
         if self._items:
@@ -352,7 +441,7 @@ class FacturaController:
     # utilidades y control de hojas de estilo (qss)
     #
     def _estilo_alerta(self, msg_box):
-        """Fuerza un diseño corporativo para evitar bugs de textos e iconos en blanco."""
+        """fuerza un diseno corporativo para evitar bugs de textos e iconos en blanco."""
         msg_box.setStyleSheet("""
             QMessageBox { background-color: white; }
             QLabel { color: #1B2A4A; font-size: 13px; font-weight: normal; }
@@ -369,7 +458,7 @@ class FacturaController:
         msg.exec()
 
     def actualizar_modulo(self):
-        """Método público para refrescar la numeración de facturas al ingresar al módulo."""
+        """metodo publico para refrescar la numeracion de facturas al ingresar al modulo."""
         self._actualizar_numero_factura()
         try:
             # obtener igv e moneda activa de la empresa
@@ -377,7 +466,7 @@ class FacturaController:
             self._moneda_activa = self.model.obtener_moneda_base_activa()
             simbolo = self._moneda_activa.get("simbolo", "S/")
             
-            # actualizar símbolo y etiqueta en la vista
+            # actualizar simbolo y etiqueta en la vista
             self.view.set_simbolo_moneda(simbolo)
             self.view.lbl_igv.setText(f"IGV ({self._tasa_igv_activa:.0f}%):")
             

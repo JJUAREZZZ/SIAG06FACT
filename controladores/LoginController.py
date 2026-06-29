@@ -13,7 +13,7 @@ class LoginController:
             self.registro_view.btn_registrar.clicked.connect(self.procesar_registro_inicial)
 
     def estilo_alerta(self, msg_box):
-        """Aplica un estilo forzado para evitar textos invisibles o blancos."""
+        """aplica un estilo forzado para evitar textos invisibles o blancos."""
         msg_box.setStyleSheet("""
             QMessageBox { background-color: white; }
             QLabel { color: #1B2A4A; font-size: 13px; font-weight: normal; }
@@ -54,9 +54,15 @@ class LoginController:
         usuario_autenticado = self.model.verificar_credenciales(user_txt, pass_txt)
 
         if usuario_autenticado:
+            # guardar usuario autenticado en la propiedad del controlador
+            self.usuario_logueado = usuario_autenticado
             self.view.accept()
         else:
             self.mostrar_alerta("Acceso Denegado", "El usuario o la contraseña son incorrectos.")
+
+    def get_usuario_autenticado(self):
+        # retorna el usuario logueado en la ultima sesion exitosa
+        return getattr(self, "usuario_logueado", None)
 
     def mostrar_alerta(self, titulo, mensaje):
         msg = QMessageBox(self.view)

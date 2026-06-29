@@ -112,7 +112,7 @@ class ClienteView(QWidget):
         self.btn_menu_clientes = QPushButton("Clientes")
         self.btn_menu_config = QPushButton("Configuración")
         
-        # aca se aplican estilos y se añaden al layout
+        # aca se aplican estilos y se anaden al layout
         for btn in [self.btn_menu_dashboard, self.btn_menu_nueva_factura, self.btn_menu_historial, self.btn_menu_productos, self.btn_menu_clientes, self.btn_menu_config]:
             btn.setStyleSheet(style_botones)
             sidebar_layout.addWidget(btn)
@@ -180,7 +180,7 @@ class ClienteView(QWidget):
         self.input_buscar.setPlaceholderText("Buscar por dni, ruc o nombre...")
         self.input_buscar.setStyleSheet("QLineEdit { padding: 8px; border: 1px solid #CCD1D9; border-radius: 4px; background: white; color: black; min-height: 28px; }")
         
-        # filtrar por categoría
+        # filtrar por categoria
         self.combo_categoria = QComboBox()
         self.combo_categoria.setStyleSheet("""
             QComboBox { padding: 7px; border: 1px solid #CCD1D9; border-radius: 4px; background: white; color: black; min-height: 28px; }
@@ -213,7 +213,7 @@ class ClienteView(QWidget):
         contenido_layout.addLayout(acc_layout)
         contenido_layout.addSpacing(10)
 
-        # tabla (se añade columna para 'tipo doc' requerida por los lineamientos de auditoría)
+        # tabla (se anade columna para 'tipo doc' requerida por los lineamientos de auditoria)
         self.tabla = QTableWidget(0, 8)
         self.tabla.setHorizontalHeaderLabels(["DNI/RUC", "Tipo Doc", "Nombre / Razón Social", "Dirección", "Email", "Teléfono", "Estado", "Fecha Registro"])
         self.tabla.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -228,7 +228,7 @@ class ClienteView(QWidget):
         self.tabla.horizontalHeader().setStretchLastSection(True)
         contenido_layout.addWidget(self.tabla)
 
-        # paginación y resumen de clientes
+        # paginacion y resumen de clientes
         bottom_layout = QHBoxLayout()
         self.pag_layout = QHBoxLayout()
         self.pag_layout.setSpacing(6)
@@ -276,7 +276,7 @@ class ClienteView(QWidget):
     def obtener_cliente_seleccionado(self):
         fila_actual = self.tabla.currentRow()
         if fila_actual != -1:
-            # ahora el estado se encuentra indexado en la columna 6 debido a la nueva inserción de tipo doc
+            # ahora el estado se encuentra indexado en la columna 6 debido a la nueva insercion de tipo doc
             return self.tabla.item(fila_actual, 0).text(), self.tabla.item(fila_actual, 6).text()
         return None
 

@@ -3,15 +3,15 @@ from PyQt6.QtWidgets import QMessageBox
 
 class ProductoController:
     """
-    Controlador maestro para la gestión del catálogo de productos y servicios.
-    Sincroniza de forma segura la vista ProductoView con el modelo relacional MAE_PRODUCTO.
+    controlador maestro para la gestion del catalogo de productos y servicios.
+    sincroniza de forma segura la vista productoview con el modelo relacional mae_producto.
     """
 
     def __init__(self, model, view):
         self.model = model
         self.view = view
         
-        # parámetros de paginación
+        # parametros de paginacion
         self.items_por_pagina = 10
         self.pagina_actual = 1
         self.productos_filtrados = []
@@ -24,7 +24,7 @@ class ProductoController:
         self.view.input_buscar.textChanged.connect(self.filtrar_datos)
         self.view.combo_categoria.currentTextChanged.connect(self.filtrar_datos)
 
-        # conectar botones de paginación
+        # conectar botones de paginacion
         self.view.btn_pag_prev.clicked.connect(self.pagina_anterior)
         self.view.btn_pag_next.clicked.connect(self.pagina_siguiente)
         for idx, btn in enumerate(self.view.pag_buttons):
@@ -33,7 +33,7 @@ class ProductoController:
             else:
                 btn.clicked.connect(lambda checked, p=int(btn.text()): self.cambiar_pagina(p))
 
-        # cargar categorías iniciales e inventario
+        # cargar categorias iniciales e inventario
         self.inicializar_categorias_filtro()
         self.actualizar_modulo()
 
@@ -48,7 +48,7 @@ class ProductoController:
             print(f"[DEBUG ERROR] Falló al cargar categorías en filtro: {e}")
 
     def mostrar_formulario_emergente(self):
-        """Instancia el asistente de registro modal, poblando sus desplegables desde la BD."""
+        """instancia el asistente de registro modal poblando sus desplegables desde la bd."""
         dialogo = FormularioProductoDialog(self.view)
         
         try:
@@ -56,17 +56,17 @@ class ProductoController:
             categorias = self.model.obtener_categorias()
             impuestos = self.model.obtener_impuestos()
             
-            # poblar dinámicamente los qcombobox del formulario emergente
+            # poblar dinamicamente los qcombobox del formulario emergente
             dialogo.poblar_selectores(categorias, impuestos)
         except Exception as e:
             self.mostrar_alerta("Error de Carga", f"No se pudieron recuperar las categorías o impuestos base:\n{e}")
             return
 
-        # si el usuario completa los datos y presiona el botón "guardar producto"
+        # si el usuario completa los datos y presiona el boton "guardar producto"
         if dialogo.exec() == FormularioProductoDialog.DialogCode.Accepted:
             datos = dialogo.obtener_datos()
             
-            # validación estricta de seguridad en campos obligatorios antes de insertar
+            # validacion estricta de seguridad en campos obligatorios antes de insertar
             if not datos["codigo_barra"] or not datos["nombre"]:
                 self.mostrar_alerta("Campos Requeridos", "El código de barra y el nombre del producto son obligatorios.")
                 return
@@ -80,7 +80,7 @@ class ProductoController:
                 return
                 
             try:
-                # invocar al método avanzado mapeando el diccionario de forma limpia
+                # invocar al metodo avanzado mapeando el diccionario de forma limpia
                 self.model.insertar_producto_avanzado(datos)
                 print("[DEBUG] Transacción de inventario completada de forma conforme.")
                 self.actualizar_modulo()
@@ -122,7 +122,7 @@ class ProductoController:
         if dialogo.exec() == FormularioProductoDialog.DialogCode.Accepted:
             datos = dialogo.obtener_datos()
             
-            # validación estricta
+            # validacion estricta
             if not datos["nombre"]:
                 self.mostrar_alerta("Campos Requeridos", "El nombre del producto es obligatorio.")
                 return
@@ -143,7 +143,7 @@ class ProductoController:
                 self.mostrar_alerta("Error de Actualización", f"El motor relacional rechazó la actualización:\n{e}")
 
     def alternar_estado_producto(self):
-        """Detecta el ítem seleccionado de la grilla y conmuta su estado (Activo / Inactivo)."""
+        """detecta el item seleccionado de la grilla y conmuta su estado (activo / inactivo)."""
         seleccion = self.view.obtener_producto_seleccionado()
         if not seleccion:
             self.mostrar_alerta("Aviso de Selección", "Por favor, seleccione una fila de la tabla para mutar su estado administrativo.")
@@ -160,9 +160,9 @@ class ProductoController:
             self.mostrar_alerta("Error de Actualización", f"Fallo en la ejecución de la consulta de actualización:\n{e}")
 
     def actualizar_modulo(self):
-        """Sincroniza la grilla de visualización y recalcula los KPIs en caliente basándose en la BD."""
+        """sincroniza la grilla de visualizacion y recalcula los kpis en caliente basandose en la bd."""
         try:
-            # sincronizar símbolo de moneda base activa
+            # sincronizar simbolo de moneda base activa
             simbolo_moneda = self.model.obtener_moneda_base_activa()
             self.view.set_simbolo_moneda(simbolo_moneda)
 
@@ -202,7 +202,7 @@ class ProductoController:
         bajo_stk = sum(1 for p in self.productos_filtrados if 0 < p.get("stock", 0) <= 5 and p.get("estado") == "Activo")
         self.view.lbl_info_productos.setText(f"Total stock: {total_stk}  |  Productos en stock: {prods_stk}  |  Items bajo stock: {bajo_stk}")
 
-        # recargar tabla con paginación
+        # recargar tabla con paginacion
         self.pagina_actual = 1
         self.cargar_tabla_paginada()
 
@@ -259,7 +259,7 @@ class ProductoController:
             self.cargar_tabla_paginada()
 
     def mostrar_alerta(self, titulo, mensaje):
-        """Despliega una notificación modal controlando estrictamente las hojas de estilo (QSS)."""
+        """despliega una notificacion modal controlando estrictamente las hojas de estilo (qss)."""
         msg = QMessageBox(self.view)
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setWindowTitle(titulo)

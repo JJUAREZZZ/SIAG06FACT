@@ -26,7 +26,7 @@ class ConfigModel:
                 descripcion TEXT NULL
             )
         """)
-        # asegurar monedas comunes (pen, usd, eur) en mae_moneda
+        # asegurar monedas comunes (pen usd eur) en mae_moneda
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='MAE_MONEDA'")
         if cursor.fetchone():
             monedas = [
@@ -74,7 +74,7 @@ class ConfigModel:
                 WHERE id_empresa = 1
             """, (razon_social, ruc, direccion, email, idioma_region, int(id_moneda_base), float(tasa_impositiva)))
             
-            # sincronizar la tasa de igv en la tabla maestra de impuestos (id_impuesto = 1 -> igv normal)
+            # sincronizar la tasa de igv en la tabla maestra de impuestos (id_impuesto  1 - igv normal)
             cursor.execute("""
                 UPDATE MAE_IMPUESTO
                 SET porcentaje = ?
@@ -137,5 +137,58 @@ class ConfigModel:
             return True
         except Exception:
             return False
+        finally:
+            conn.close()
+
+    def obtener_facturas_para_ple(self):
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT f.num_factura, f.serie_comprobante, f.correlativo_comprobante, f.tipo_documento,
+                       f.fecha_emision, f.fecha_vencimiento, f.subtotal, f.total_impuestos, f.total, f.estado,
+                       f.dni_ruc, c.nombre_razon_social AS cliente_nombre, c.tipo_documento AS cliente_tipo_doc
+                FROM TRS_FACTURA f
+                JOIN MAE_CLIENTE c ON f.dni_ruc = c.dni_ruc
+                ORDER BY f.fecha_emision ASC, f.num_factura ASC
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    def respaldar_bd(self, backup_path, password=None):
+        # respaldar base de datos y aplicar cifrado simetrico con password si se solicita
+        temp_path = backup_path + ".tmp"
+        conn = self._get_connection()
+        try:
+            dest_conn = sqlite3.connect(temp_path)
+            conn.backup(dest_conn)
+            dest_conn.close()
+            
+            if password:
+                with open(temp_path, "rb") as f:
+                    raw_data = f.read()
+                
+                from controladores.CifradoHelper import cifrar_datos
+                encrypted_data = cifrar_datos(raw_data, password)
+                
+                with open(backup_path, "wb") as f:
+                    f.write(encrypted_data)
+                
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            else:
+                if os.path.exists(backup_path):
+                    os.remove(backup_path)
+                os.rename(temp_path, backup_path)
+                
+            return True, f"Copia de seguridad creada en {backup_path}"
+        except Exception as e:
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
+            return False, str(e)
         finally:
             conn.close()
