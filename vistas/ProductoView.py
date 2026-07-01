@@ -362,7 +362,57 @@ class ProductoView(QWidget):
         falso_layout.setContentsMargins(0, 0, 0, 0)
 
         self.contenido_widget = QWidget()
-        self.contenido_widget.setStyleSheet("background-color: #F4F6F9;")
+        self.contenido_widget.setObjectName("ContenidoWidget")
+        self.contenido_widget.setStyleSheet("""
+            QWidget#ContenidoWidget { background-color: #F4F6F9; }
+            QWidget { font-family: 'Segoe UI', Arial, sans-serif; color: black; }
+            QLabel { color: #1B2A4A; font-size: 13px; font-weight: bold; }
+            QLineEdit {
+                padding: 8px;
+                border: 1px solid #CCD1D9;
+                border-radius: 4px;
+                background: white;
+                color: black;
+                font-size: 13px;
+                min-height: 28px;
+            }
+            QLineEdit:focus { border: 1.5px solid #1B2A4A; }
+            QComboBox {
+                padding: 7px;
+                border: 1px solid #CCD1D9;
+                border-radius: 4px;
+                background: white;
+                color: black;
+                font-size: 13px;
+                min-height: 28px;
+            }
+            QComboBox:focus { border: 1.5px solid #1B2A4A; }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                border: 1px solid #CCD1D9;
+                selection-background-color: #1B2A4A;
+                selection-color: white;
+                padding: 4px;
+            }
+            QFrame { color: black; }
+            QTableWidget {
+                background-color: white;
+                color: black;
+                border: 1px solid #E6E9ED;
+                border-radius: 4px;
+            }
+            QTableWidget::item { color: black; background-color: white; }
+            QTableWidget::item:selected { background-color: #E6E9ED; color: #1B2A4A; }
+            QHeaderView::section {
+                background-color: #1B2A4A;
+                color: white;
+                padding: 8px;
+                font-weight: bold;
+                border: none;
+            }
+            QPushButton { color: black; }
+        """)
         contenido_layout = QVBoxLayout(self.contenido_widget)
         contenido_layout.setContentsMargins(25, 20, 25, 20)
         
@@ -430,8 +480,10 @@ class ProductoView(QWidget):
         self.btn_abrir_formulario = QPushButton("Añadir nuevo item")
         self.btn_abrir_formulario.setStyleSheet("QPushButton { background-color: #70AD47; color: white; font-weight: bold; padding: 8px 15px; border-radius: 4px; border: none; } QPushButton:hover { background-color: #5B9337; }")
         
+        lbl_filtrar = QLabel("Filtrar por categoría:")
+        lbl_filtrar.setStyleSheet("color: #1B2A4A; font-size: 13px; font-weight: bold;")
         acc_layout.addWidget(self.input_buscar, 4)
-        acc_layout.addWidget(QLabel("Filtrar por categoría:"))
+        acc_layout.addWidget(lbl_filtrar)
         acc_layout.addWidget(self.combo_categoria, 2)
         acc_layout.addWidget(self.btn_cambiar_estado, 2)
         acc_layout.addWidget(self.btn_modificar, 3)

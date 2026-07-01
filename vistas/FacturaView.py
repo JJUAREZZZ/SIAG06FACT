@@ -119,9 +119,19 @@ class FacturaView(QWidget):
         # sizepolicy expansiva para que el stackedwidget lo estire al 100
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-        # estilos globales
-        self.setStyleSheet("""
-            QWidget { font-family: 'Segoe UI', Arial, sans-serif; }
+        # layout raiz igual estructura que los demas modulos
+        falso_layout = QHBoxLayout(self)
+        falso_layout.setContentsMargins(0, 0, 0, 0)
+        falso_layout.setSpacing(0)
+
+        # widget principal de contenido
+        self.contenido_widget = QWidget()
+        self.contenido_widget.setObjectName("ContenidoWidget")
+        # estilos globales aplicados directamente al contenido_widget
+        # para que sobrevivan al reparentado en QStackedWidget
+        self.contenido_widget.setStyleSheet("""
+            QWidget#ContenidoWidget { background-color: #F4F6F9; }
+            QWidget { font-family: 'Segoe UI', Arial, sans-serif; color: black; }
 
             QLabel { color: #000000; font-size: 13px; font-weight: bold; border: none; }
 
@@ -191,16 +201,8 @@ class FacturaView(QWidget):
                 border: none;
                 border-right: 1px solid #2C3E6B;
             }
+            QPushButton { color: black; }
         """)
-
-        # layout raiz igual estructura que los demas modulos
-        falso_layout = QHBoxLayout(self)
-        falso_layout.setContentsMargins(0, 0, 0, 0)
-        falso_layout.setSpacing(0)
-
-        # widget principal de contenido
-        self.contenido_widget = QWidget()
-        self.contenido_widget.setStyleSheet("background-color: #F4F6F9;")
         self.contenido_widget.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
@@ -292,7 +294,7 @@ class FacturaView(QWidget):
         for col, txt in enumerate(["Cliente / Razón Social", "DNI / RUC", "Fecha Emisión"]):
             lbl = QLabel(txt.upper())
             lbl.setStyleSheet(
-                "color: #8A96B0; font-size: 10px; font-weight: bold; "
+                "color: #5A6580; font-size: 10px; font-weight: bold; "
                 "letter-spacing: 0.4px; border: none; padding: 0;"
             )
             grid_cliente.addWidget(lbl, 1, col)
@@ -312,7 +314,7 @@ class FacturaView(QWidget):
         for col, txt in enumerate(["Dirección", "Teléfono", "Email"]):
             lbl = QLabel(txt.upper())
             lbl.setStyleSheet(
-                "color: #8A96B0; font-size: 10px; font-weight: bold; "
+                "color: #5A6580; font-size: 10px; font-weight: bold; "
                 "letter-spacing: 0.4px; border: none; padding: 0; margin-top: 4px;"
             )
             grid_cliente.addWidget(lbl, 3, col)
@@ -329,7 +331,7 @@ class FacturaView(QWidget):
         for col, txt in enumerate(["Tipo Comprobante", "Forma de Pago", "Método de Pago", "Moneda"]):
             lbl = QLabel(txt.upper())
             lbl.setStyleSheet(
-                "color: #8A96B0; font-size: 10px; font-weight: bold; "
+                "color: #5A6580; font-size: 10px; font-weight: bold; "
                 "letter-spacing: 0.4px; border: none; padding: 0; margin-top: 8px;"
             )
             grid_cliente.addWidget(lbl, 5, col)
@@ -392,7 +394,7 @@ class FacturaView(QWidget):
                                     "Stock disponible", "Precio unitario"]):
             lbl = QLabel(txt.upper())
             lbl.setStyleSheet(
-                "color: #8A96B0; font-size: 10px; font-weight: bold; "
+                "color: #5A6580; font-size: 10px; font-weight: bold; "
                 "letter-spacing: 0.4px; border: none; padding: 0;"
             )
             grid_prod.addWidget(lbl, 1, col)
@@ -416,12 +418,12 @@ class FacturaView(QWidget):
         # etiquetas cantidad / descuento
         lbl_cant = QLabel("CANTIDAD")
         lbl_cant.setStyleSheet(
-            "color: #8A96B0; font-size: 10px; font-weight: bold; "
+            "color: #5A6580; font-size: 10px; font-weight: bold; "
             "letter-spacing: 0.4px; border: none; padding: 0;"
         )
         lbl_desc_pct = QLabel("DESCUENTO (%)")
         lbl_desc_pct.setStyleSheet(
-            "color: #8A96B0; font-size: 10px; font-weight: bold; "
+            "color: #5A6580; font-size: 10px; font-weight: bold; "
             "letter-spacing: 0.4px; border: none; padding: 0;"
         )
         grid_prod.addWidget(lbl_cant,     4, 0)
@@ -607,7 +609,9 @@ class FacturaView(QWidget):
     # y esto esta relacionado a la api publica (usada por facturacontroller)
     def set_cliente(self, datos: dict):
         self.lbl_cli_nombre.setText(datos.get("nombre_razon_social") or "—")
-        self.lbl_cli_doc.setText(datos.get("dni_ruc") or "—")
+        tipo = datos.get("tipo_documento", "DNI")
+        doc = datos.get("dni_ruc") or "—"
+        self.lbl_cli_doc.setText(f"{tipo}: {doc}" if doc != "—" else "—")
         self.lbl_cli_dir.setText(datos.get("direccion") or "—")
         self.lbl_cli_tel.setText(datos.get("telefono") or "—")
         self.lbl_cli_email.setText(datos.get("email") or "—")

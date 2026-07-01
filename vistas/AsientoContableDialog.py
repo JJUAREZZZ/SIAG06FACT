@@ -8,6 +8,8 @@ from PyQt6.QtGui import QColor, QFont
 class AsientoContableDialog(QDialog):
     def __init__(self, num_factura, asientos, parent=None):
         super().__init__(parent)
+        self.num_factura = num_factura
+        self.asientos = asientos
         self.setWindowTitle(f"Asiento Contable — Factura {num_factura}")
         self.resize(700, 480)
         self.setStyleSheet("background-color: #F4F6F9;")
@@ -105,7 +107,7 @@ class AsientoContableDialog(QDialog):
             container = QVBoxLayout()
             container.setSpacing(2)
             t_lbl = QLabel(title.upper())
-            t_lbl.setStyleSheet("color: #8A96B0; font-size: 9px; font-weight: bold; letter-spacing: 0.4px;")
+            t_lbl.setStyleSheet("color: #5A6580; font-size: 9px; font-weight: bold; letter-spacing: 0.4px;")
             v_lbl = QLabel(value)
             v_lbl.setStyleSheet("color: #1B2A4A; font-size: 13px; font-weight: bold;")
             container.addWidget(t_lbl)
@@ -218,14 +220,8 @@ class AsientoContableDialog(QDialog):
         return widget
 
     def _exportar_pdf_simulado(self):
-        msg = QMessageBox(self)
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.setWindowTitle("Exportación de PDF")
-        msg.setText("✔ Representación física e impresa del Asiento Contable exportada a PDF de forma exitosa.")
-        msg.setStyleSheet("""
-            QMessageBox { background-color: white; }
-            QLabel { color: #1B2A4A; font-size: 13px; }
-            QPushButton { background-color: #1B2A4A; color: white; padding: 6px 18px; border-radius: 4px; font-weight: bold; min-width: 70px; border: none; }
-            QPushButton:hover { background-color: #2C3E6B; }
-        """)
-        msg.exec()
+        try:
+            from controladores import ImpresionHelper
+            ImpresionHelper.imprimir_asiento_html(self.num_factura, self.asientos, parent_widget=self)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo exportar el asiento contable:\n{e}")

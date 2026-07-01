@@ -51,6 +51,16 @@ from controladores.HistorialController import HistorialController
 def main():
     app = QApplication(sys.argv)
 
+    # forzar texto negro globalmente para evitar que pyqt6 auto-defina texto blanco
+    app.setStyleSheet("""
+        QLabel { color: black; }
+        QComboBox { color: black; }
+        QLineEdit { color: black; }
+        QTableWidget { color: black; }
+        QTableWidget::item { color: black; }
+        QFrame { color: black; }
+    """)
+
     # aca se carga el modelo del login osea las contrasenas y usuarios encryptados
     login_model = UsuarioModel()
 

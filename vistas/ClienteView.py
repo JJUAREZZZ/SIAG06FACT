@@ -9,19 +9,52 @@ class FormularioClienteDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Añadir nuevo cliente")
-        self.setFixedSize(400, 320)
+        self.setFixedSize(400, 360)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
         self.setStyleSheet("background-color: white;")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(10)
 
         lbl_title = QLabel("Registrar Cliente")
-        lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1B2A4A; margin-bottom: 10px;")
+        lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1B2A4A; margin-bottom: 5px;")
         layout.addWidget(lbl_title)
 
+        # Contenedor para Tipo Doc y Numero
+        doc_layout = QHBoxLayout()
+        doc_layout.setSpacing(10)
+
+        self.combo_tipo_doc = QComboBox()
+        self.combo_tipo_doc.addItems(["DNI", "RUC"])
+        self.combo_tipo_doc.setStyleSheet("""
+            QComboBox {
+                padding: 7px;
+                border: 1px solid #CCD1D9;
+                border-radius: 4px;
+                background: #F4F6F9;
+                color: black;
+                font-size: 13px;
+                min-height: 28px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                border: 1px solid #CCD1D9;
+                selection-background-color: #1B2A4A;
+                selection-color: white;
+                padding: 4px;
+            }
+        """)
+        self.combo_tipo_doc.setFixedWidth(80)
+
         self.input_dni = QLineEdit()
-        self.input_dni.setPlaceholderText("DNI / RUC (Obligatorio)")
+        self.input_dni.setPlaceholderText("Número de documento (Obligatorio)")
+
+        doc_layout.addWidget(self.combo_tipo_doc)
+        doc_layout.addWidget(self.input_dni)
+        layout.addLayout(doc_layout)
+
         self.input_nombre = QLineEdit()
         self.input_nombre.setPlaceholderText("Nombre o Razón Social (Obligatorio)")
         self.input_direccion = QLineEdit()
@@ -34,25 +67,37 @@ class FormularioClienteDialog(QDialog):
         style_input = "QLineEdit { padding: 8px; border: 1px solid #CCD1D9; border-radius: 4px; background: #F4F6F9; color: black; font-size: 13px; min-height: 28px; }"
         for inp in [self.input_dni, self.input_nombre, self.input_direccion, self.input_email, self.input_telefono]:
             inp.setStyleSheet(style_input)
-            layout.addWidget(inp)
+            if inp != self.input_dni:
+                layout.addWidget(inp)
 
-        layout.addSpacing(10)
+        layout.addSpacing(5)
 
         btn_layout = QHBoxLayout()
         self.btn_cancelar = QPushButton("Cancelar")
-        self.btn_cancelar.setStyleSheet("QPushButton { background-color: #C00000; color: white; padding: 8px; border-radius: 4px; font-weight: bold; }")
+        self.btn_cancelar.setStyleSheet("QPushButton { background-color: #C00000; color: white; padding: 8px; border-radius: 4px; font-weight: bold; border: none; }")
         self.btn_cancelar.clicked.connect(self.reject)
 
         self.btn_guardar_form = QPushButton("Guardar")
-        self.btn_guardar_form.setStyleSheet("QPushButton { background-color: #70AD47; color: white; padding: 8px; border-radius: 4px; font-weight: bold; }")
+        self.btn_guardar_form.setStyleSheet("QPushButton { background-color: #70AD47; color: white; padding: 8px; border-radius: 4px; font-weight: bold; border: none; }")
         self.btn_guardar_form.clicked.connect(self.accept)
 
         btn_layout.addWidget(self.btn_cancelar)
         btn_layout.addWidget(self.btn_guardar_form)
         layout.addLayout(btn_layout)
 
+        # Conectar cambio de tipo de documento
+        self.combo_tipo_doc.currentTextChanged.connect(self._on_tipo_doc_changed)
+        self._on_tipo_doc_changed("DNI")
+
+    def _on_tipo_doc_changed(self, text):
+        if text == "DNI":
+            self.input_dni.setPlaceholderText("DNI (8 dígitos)")
+        else:
+            self.input_dni.setPlaceholderText("RUC (11 dígitos)")
+
     def obtener_datos(self):
         return (
+            self.combo_tipo_doc.currentText(),
             self.input_dni.text().strip(),
             self.input_nombre.text().strip(),
             self.input_direccion.text().strip(),
@@ -62,9 +107,14 @@ class FormularioClienteDialog(QDialog):
 
     def precompletar(self, datos):
         self.setWindowTitle("Modificar cliente")
+        tipo_doc = datos.get("tipo_documento", "DNI")
+        self.combo_tipo_doc.setCurrentText(tipo_doc)
+        self.combo_tipo_doc.setEnabled(False)
+        
         self.input_dni.setText(datos.get("dni_ruc", ""))
         self.input_dni.setReadOnly(True)
         self.input_dni.setStyleSheet("QLineEdit { padding: 8px; border: 1px solid #CCD1D9; border-radius: 4px; background: #E2EAF8; color: #555555; font-size: 13px; min-height: 28px; }")
+        
         self.input_nombre.setText(datos.get("nombre_razon_social", ""))
         self.input_direccion.setText(datos.get("direccion", "") or "")
         self.input_email.setText(datos.get("email", "") or "")
@@ -124,7 +174,57 @@ class ClienteView(QWidget):
 
         # contenido principal
         self.contenido_widget = QWidget()
-        self.contenido_widget.setStyleSheet("background-color: #F4F6F9;")
+        self.contenido_widget.setObjectName("ContenidoWidget")
+        self.contenido_widget.setStyleSheet("""
+            QWidget#ContenidoWidget { background-color: #F4F6F9; }
+            QWidget { font-family: 'Segoe UI', Arial, sans-serif; color: black; }
+            QLabel { color: #1B2A4A; font-size: 13px; font-weight: bold; }
+            QLineEdit {
+                padding: 8px;
+                border: 1px solid #CCD1D9;
+                border-radius: 4px;
+                background: white;
+                color: black;
+                font-size: 13px;
+                min-height: 28px;
+            }
+            QLineEdit:focus { border: 1.5px solid #1B2A4A; }
+            QComboBox {
+                padding: 7px;
+                border: 1px solid #CCD1D9;
+                border-radius: 4px;
+                background: white;
+                color: black;
+                font-size: 13px;
+                min-height: 28px;
+            }
+            QComboBox:focus { border: 1.5px solid #1B2A4A; }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                border: 1px solid #CCD1D9;
+                selection-background-color: #1B2A4A;
+                selection-color: white;
+                padding: 4px;
+            }
+            QFrame { color: black; }
+            QTableWidget {
+                background-color: white;
+                color: black;
+                border: 1px solid #E6E9ED;
+                border-radius: 4px;
+            }
+            QTableWidget::item { color: black; background-color: white; }
+            QTableWidget::item:selected { background-color: #E6E9ED; color: #1B2A4A; }
+            QHeaderView::section {
+                background-color: #1B2A4A;
+                color: white;
+                padding: 8px;
+                font-weight: bold;
+                border: none;
+            }
+            QPushButton { color: black; }
+        """)
         contenido_layout = QVBoxLayout(self.contenido_widget)
         contenido_layout.setContentsMargins(25, 20, 25, 20)
         
@@ -204,8 +304,10 @@ class ClienteView(QWidget):
         self.btn_abrir_formulario = QPushButton("Añadir nuevo item")
         self.btn_abrir_formulario.setStyleSheet("QPushButton { background-color: #70AD47; color: white; font-weight: bold; padding: 8px 15px; border-radius: 4px; border: none; } QPushButton:hover { background-color: #5B9337; }")
         
+        lbl_filtrar = QLabel("Filtrar por categoría:")
+        lbl_filtrar.setStyleSheet("color: #1B2A4A; font-size: 13px; font-weight: bold;")
         acc_layout.addWidget(self.input_buscar, 4)
-        acc_layout.addWidget(QLabel("Filtrar por categoría:"))
+        acc_layout.addWidget(lbl_filtrar)
         acc_layout.addWidget(self.combo_categoria, 2)
         acc_layout.addWidget(self.btn_cambiar_estado, 2)
         acc_layout.addWidget(self.btn_modificar, 3)

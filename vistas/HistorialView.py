@@ -22,7 +22,7 @@ class HistorialView(QWidget):
         self.contenido_widget.setObjectName("ContenidoWidget")
         self.contenido_widget.setStyleSheet("""
             QWidget#ContenidoWidget { background-color: #F4F6F9; }
-            QWidget { font-family: 'Segoe UI', Arial, sans-serif; }
+            QWidget { font-family: 'Segoe UI', Arial, sans-serif; color: black; }
             QLabel { color: #1B2A4A; font-size: 13px; font-weight: bold; }
             QLineEdit {
                 padding: 5px 8px;
@@ -57,6 +57,7 @@ class HistorialView(QWidget):
                 border-radius: 6px;
                 border: 1px solid #E6E9ED;
             }
+            QFrame { color: black; }
             QTableWidget {
                 background-color: white;
                 color: black;
@@ -72,6 +73,7 @@ class HistorialView(QWidget):
                 font-weight: bold;
                 border: none;
             }
+            QPushButton { color: black; }
         """)
         self.contenido_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         contenido_layout = QVBoxLayout(self.contenido_widget)

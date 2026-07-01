@@ -541,3 +541,261 @@ def generar_xml_ubl_sunat(factura_data):
     xml_path = os.path.join(XML_DIR, xml_filename)
     xml_tree.write(xml_path, encoding="utf-8", xml_declaration=True)
     return xml_path
+
+def imprimir_asiento_html(num_factura, asientos, parent_widget=None):
+    # Genera y abre en navegador un HTML estilizado para el asiento contable
+    if not asientos:
+        return None
+        
+    # Usar el primer asiento para el nombre de archivo
+    num_asiento = asientos[0].get("num_asiento", "AC-00000")
+    
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Asiento Contable {num_asiento}</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            color: #1B2A4A;
+            background-color: #F4F6F9;
+        }}
+        .container {{
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            text-align: center;
+            border-bottom: 2px solid #1B2A4A;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 24px;
+            color: #1B2A4A;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+        .meta-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+            background-color: #F8FAFC;
+            padding: 20px;
+            border: 1px solid #E6E9ED;
+            border-radius: 6px;
+        }}
+        .meta-item {{
+            font-size: 13px;
+        }}
+        .meta-label {{
+            font-weight: bold;
+            color: #5A6580;
+            text-transform: uppercase;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }}
+        .meta-val {{
+            font-weight: bold;
+            color: #1B2A4A;
+            font-size: 14px;
+        }}
+        .asiento-block {{
+            margin-bottom: 40px;
+        }}
+        .asiento-title {{
+            font-size: 16px;
+            font-weight: bold;
+            color: #1B2A4A;
+            border-left: 4px solid #70AD47;
+            padding-left: 10px;
+            margin-bottom: 15px;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }}
+        th {{
+            background-color: #1B2A4A;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 12px 10px;
+            text-align: left;
+            text-transform: uppercase;
+        }}
+        td {{
+            padding: 12px 10px;
+            border-bottom: 1px solid #E6E9ED;
+            font-size: 13px;
+        }}
+        tr:nth-child(even) {{
+            background-color: #F8FAFC;
+        }}
+        .text-right {{
+            text-align: right;
+        }}
+        .text-center {{
+            text-align: center;
+        }}
+        .totales-row {{
+            font-weight: bold;
+        }}
+        .totales-row td {{
+            font-weight: bold;
+            background-color: #EEF2FA;
+            border-top: 2px solid #1B2A4A;
+            font-size: 14px;
+        }}
+        .badge {{
+            display: inline-block;
+            color: #468847;
+            font-size: 11px;
+            font-weight: bold;
+            background-color: #DFF0D8;
+            border: 1px solid #D6E9C6;
+            border-radius: 4px;
+            padding: 4px 8px;
+            text-transform: uppercase;
+        }}
+        .no-print {{
+            text-align: center;
+            margin-bottom: 20px;
+        }}
+        .btn-print {{
+            background-color: #70AD47;
+            color: white;
+            font-weight: bold;
+            padding: 10px 24px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }}
+        .btn-print:hover {{
+            background-color: #5B9337;
+        }}
+        @media print {{
+            body {{
+                background-color: white;
+                padding: 0;
+            }}
+            .container {{
+                box-shadow: none;
+                padding: 0;
+            }}
+            .no-print {{
+                display: none;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button class="btn-print" onclick="window.print();">Imprimir Asiento Contable</button>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Representación Física de Asiento Contable</h1>
+        </div>
+"""
+
+    for as_data in asientos:
+        total_debe = float(as_data.get("total_debe", 0.0))
+        total_haber = float(as_data.get("total_haber", 0.0))
+        glosa = html.escape(str(as_data.get("glosa", "")))
+        fecha = as_data.get("fecha", "")
+        num_as = as_data.get("num_asiento", "")
+        
+        html_content += f"""
+        <div class="asiento-block">
+            <div class="asiento-title">Asiento: {num_as}</div>
+            
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <div class="meta-label">Glosa General</div>
+                    <div class="meta-val">{glosa}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Fecha de Registro</div>
+                    <div class="meta-val">{fecha}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Documento de Referencia</div>
+                    <div class="meta-val">Factura {num_factura}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Estado Contable</div>
+                    <div class="meta-val"><span class="badge">CUADRADO</span></div>
+                </div>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Cuenta</th>
+                        <th style="width: 55%;">Denominación / Descripción</th>
+                        <th style="width: 15%; text-align: right;">Debe (S/)</th>
+                        <th style="width: 15%; text-align: right;">Haber (S/)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        
+        for line in as_data.get("detalles", []):
+            code = html.escape(str(line.get("cuenta_codigo", "")))
+            name = html.escape(str(line.get("cuenta_nombre", "")))
+            debe = float(line.get("debe", 0.0))
+            haber = float(line.get("haber", 0.0))
+            
+            debe_str = f"S/ {debe:,.2f}" if debe > 0 else "—"
+            haber_str = f"S/ {haber:,.2f}" if haber > 0 else "—"
+            
+            html_content += f"""
+                    <tr>
+                        <td class="text-center"><b>{code}</b></td>
+                        <td>{name}</td>
+                        <td class="text-right">{debe_str}</td>
+                        <td class="text-right">{haber_str}</td>
+                    </tr>
+            """
+            
+        html_content += f"""
+                    <tr class="totales-row">
+                        <td colspan="2" class="text-right">TOTALES:</td>
+                        <td class="text-right">S/ {total_debe:,.2f}</td>
+                        <td class="text-right">S/ {total_haber:,.2f}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        """
+
+    html_content += """
+    </div>
+</body>
+</html>
+"""
+
+    # Sanitizar nombre de archivo
+    nombre_seguro = num_asiento
+    for c in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
+        nombre_seguro = nombre_seguro.replace(c, '_')
+        
+    file_path = os.path.join(IMPRESAS_DIR, f"asiento_{nombre_seguro}.html")
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(html_content)
+        
+    webbrowser.open("file://" + os.path.abspath(file_path))
+    return file_path

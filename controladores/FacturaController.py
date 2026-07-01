@@ -62,6 +62,14 @@ class FacturaController:
         self.view.lbl_num_factura.setText(codigo)
         self._num_factura = codigo
 
+        # Si ya hay un cliente seleccionado y se cambia a Factura, validar consistencia
+        if hasattr(self, '_cliente_actual') and self._cliente_actual:
+            doc_cliente = self._cliente_actual.get("dni_ruc", "")
+            if tipo_doc == "Factura Electrónica" and len(doc_cliente) != 11:
+                self._cliente_actual = None
+                self.view.set_cliente({})
+                self._msg_warn("El cliente seleccionado tiene DNI y no es válido para Factura Electrónica. Se ha deseleccionado.")
+
     def _on_moneda_changed(self):
         txt = self.view.combo_moneda.currentText()
         simbolo = "S/" if "PEN" in txt else "$"
@@ -84,6 +92,7 @@ class FacturaController:
     # busqueda interactiva de clientes (mae_cliente)
     #
     def _abrir_busqueda_cliente(self):
+        tipo_comprobante = self.view.combo_tipo_comprobante.currentText()
         popup = BusquedaPopup(
             "Seleccionar cliente",
             ["DNI/RUC", "Nombre / Razón Social", "Teléfono", "Email"],
@@ -92,6 +101,12 @@ class FacturaController:
         clientes = self.cliente_model.obtener_todos()
         # filtrado estricto por regulacion: solo clientes en estado activo
         activos = [c for c in clientes if c.get("estado", "Activo") == "Activo"]
+        
+        # Filtrar segun tipo de comprobante seleccionado
+        if tipo_comprobante == "Factura Electrónica":
+            # Para Facturas, solo clientes con RUC (11 digitos)
+            activos = [c for c in activos if c.get("tipo_documento") == "RUC" or len(c["dni_ruc"]) == 11]
+
         filas = [
             {
                 "dni_ruc":            c["dni_ruc"],

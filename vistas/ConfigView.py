@@ -148,7 +148,7 @@ class ConfigView(QWidget):
         self.contenido_widget.setObjectName("ContenidoWidget")
         self.contenido_widget.setStyleSheet("""
             QWidget#ContenidoWidget { background-color: #F4F6F9; }
-            QWidget { font-family: 'Segoe UI', Arial, sans-serif; }
+            QWidget { font-family: 'Segoe UI', Arial, sans-serif; color: black; }
             QLabel { color: #1B2A4A; font-size: 13px; font-weight: bold; }
             QLineEdit {
                 padding: 5px 8px;
@@ -160,11 +160,30 @@ class ConfigView(QWidget):
                 min-height: 28px;
             }
             QLineEdit:focus { border: 1.5px solid #1B2A4A; }
+            QComboBox {
+                padding: 4px 7px;
+                border: 1px solid #CCD1D9;
+                border-radius: 4px;
+                background: white;
+                color: black;
+                font-size: 13px;
+                min-height: 28px;
+            }
+            QComboBox:focus { border: 1.5px solid #1B2A4A; }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                border: 1px solid #CCD1D9;
+                selection-background-color: #1B2A4A;
+                selection-color: white;
+                padding: 4px;
+            }
             QFrame#SeccionFrame {
                 background-color: white;
                 border-radius: 6px;
                 border: 1px solid #E6E9ED;
             }
+            QFrame { color: black; }
             QTableWidget {
                 background-color: white;
                 color: black;
@@ -180,6 +199,7 @@ class ConfigView(QWidget):
                 font-weight: bold;
                 border: none;
             }
+            QPushButton { color: black; }
         """)
         self.contenido_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         contenido_layout = QVBoxLayout(self.contenido_widget)
@@ -287,6 +307,7 @@ class ConfigView(QWidget):
         self.tabla_usuarios.setFixedHeight(160)
         usuarios_lay.addWidget(self.tabla_usuarios)
         col_izq.addWidget(usuarios_frame)
+        col_izq.addStretch()
 
         cols_layout.addLayout(col_izq, 4)
 
@@ -301,6 +322,7 @@ class ConfigView(QWidget):
 
         seguridad_hdr = QHBoxLayout()
         seguridad_hdr.addWidget(QLabel("Módulos y seguridad", styleSheet="font-size: 15px; color: #1B2A4A;"))
+        seguridad_lay.addLayout(seguridad_hdr)
         col_der.addWidget(seguridad_frame)
 
         impresion_frame = QFrame()
@@ -363,12 +385,14 @@ class ConfigView(QWidget):
 
         for idx, (key, label_text) in enumerate(features):
             lbl = QLabel(label_text)
+            lbl.setStyleSheet("color: #1B2A4A; font-size: 13px; font-weight: bold;")
             sw = ToggleSwitch()
             toggles_grid.addWidget(lbl, idx, 0)
             toggles_grid.addWidget(sw, idx, 1, Qt.AlignmentFlag.AlignRight)
             self.switches[key] = sw
 
         seguridad_lay.addLayout(toggles_grid)
+        col_der.addStretch()
         cols_layout.addLayout(col_der, 3)
 
         contenido_layout.addLayout(cols_layout)

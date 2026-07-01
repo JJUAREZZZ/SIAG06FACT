@@ -35,19 +35,25 @@ class ClienteController:
         dialogo = FormularioClienteDialog(self.view)
         if dialogo.exec() == FormularioClienteDialog.DialogCode.Accepted:
             datos = dialogo.obtener_datos()
-            dni_ruc, nombre_razon_social, direccion, email, telefono = datos
+            tipo_doc, dni_ruc, nombre_razon_social, direccion, email, telefono = datos
             
             # validacion robusta
             if not dni_ruc or not nombre_razon_social:
-                self.mostrar_alerta("Campos Requeridos", "El DNI/RUC y el Nombre/Razón Social son obligatorios.")
+                self.mostrar_alerta("Campos Requeridos", "El número de documento y el Nombre/Razón Social son obligatorios.")
                 return
                 
-            if not dni_ruc.isdigit() or len(dni_ruc) not in (8, 11):
-                self.mostrar_alerta("Identificación Inválida", "El número de documento debe ser puramente numérico:\n- DNI: 8 dígitos\n- RUC: 11 dígitos")
-                return
+            if tipo_doc == "DNI":
+                if not dni_ruc.isdigit() or len(dni_ruc) != 8:
+                    self.mostrar_alerta("Identificación Inválida", "El DNI debe contener exactamente 8 dígitos numéricos.")
+                    return
+            elif tipo_doc == "RUC":
+                if not dni_ruc.isdigit() or len(dni_ruc) != 11:
+                    self.mostrar_alerta("Identificación Inválida", "El RUC debe contener exactamente 11 dígitos numéricos.")
+                    return
 
             try:
-                self.model.insertar_cliente(datos)
+                # pasamos la tupla esperada por el modelo (dni_ruc, nombre, dir, email, tel)
+                self.model.insertar_cliente((dni_ruc, nombre_razon_social, direccion, email, telefono))
                 self.mostrar_info("Cliente Guardado", "El cliente se ha registrado con éxito en la base de datos.")
                 self.actualizar_modulo()
             except Exception as e:
@@ -77,7 +83,7 @@ class ClienteController:
         
         if dialogo.exec() == FormularioClienteDialog.DialogCode.Accepted:
             datos = dialogo.obtener_datos()
-            _, nombre_razon_social, direccion, email, telefono = datos
+            _, _, nombre_razon_social, direccion, email, telefono = datos
             
             # validacion robusta
             if not nombre_razon_social:
